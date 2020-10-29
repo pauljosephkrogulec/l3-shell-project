@@ -31,7 +31,9 @@ isDirectory() {
 
 
 
-#isNsmletpg() {}
+isNsmletpg() { 
+    echo 0
+}
 
 i=1
 end=0
@@ -49,8 +51,13 @@ do
             then
                 param_dec=true
             else
-                echo "invalid option -- '$1'"
-                end=1
+                if test $param_nsmletpg != true -a $(isNsmletpg $1) -eq 1
+                then
+                    param_nsmletpg=true
+                else
+                    echo "invalid option -- '$1'"
+                    end=1
+            fi
             fi
         fi
     else
