@@ -10,6 +10,10 @@ param_dec=false         # Vrai si la commande -d est appelé, sinon faux.
 param_nsmletpg=false    # Vrai si la commande -nsmletpg est appelé, sinon faux.
 param_rep=false         # Vrai si on a bien un répertoire en paramètre, faux sinon.
 
+isCommand() {
+    test ${1:0:1} == '-' && return 1 || return 0
+}
+
 # Fonciton qui vérifie si le premier paramètre est bien une commande d'appel résursif (-R)
 isRecursif() {
     test "$1" == "-R" && param_rec=true
