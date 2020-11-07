@@ -11,6 +11,7 @@ param_dec=false       # Vrai si la commande -d est appelé, sinon faux.
 param_nsmletpg=false  # Vrai si la commande -nsmletpg est appelé, sinon faux.
 param_rep=false       # Vrai si on a bien un répertoire en paramètre, faux sinon.
 nsmletpg="nsmletpg"
+dirname=""
 
 isCommand() {
     test ${1:0:1} == '-' && echo 1 || echo 0
@@ -62,10 +63,10 @@ isDirectory() {
 
 
 
-i=1
-end=0
 # On verifie si le paramètre 
 # on appelle une fonction qui verifie les paramètres
+i=1
+end=0
 while test $i -le $# -a $end -eq 0
 do  
     if test $(isCommand $1) -eq 1
@@ -83,6 +84,7 @@ do
                     param_nsmletpg=true
                 else
                     echo "invalid option -- '$1'"
+                    exit 1
                     end=1
             fi
             fi
@@ -91,8 +93,10 @@ do
         if test $param_rep != true -a $(isDirectory $1) -eq 1
         then
             param_rep=true
+            dirname=$1
         else
             echo "invalid option -- '$1'"
+            exit 2
             end=1
         fi
     fi
@@ -101,3 +105,21 @@ do
         shift
     fi
 done
+
+createString(){
+    chaine=""
+    for i in "$1"/*
+    do
+        if test -f "$i"
+        then
+            chaine=$chaine"$i@"
+        else
+            if test -d "$i" -a $param_rec == true
+            then
+                chaine=$chaine createString $i
+            fi
+        fi
+    done
+    echo $chaine
+}
+createString $dirname
