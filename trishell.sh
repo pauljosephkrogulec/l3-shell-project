@@ -12,7 +12,7 @@ param_nsmletpg=false  # Vrai si la commande -nsmletpg est appelé, sinon faux.
 param_rep=false       # Vrai si on a bien un répertoire en paramètre, faux sinon.
 nsmletpg="nsmletpg"
 dirname=""
-
+ch=""
 isCommand() {
     test ${1:0:1} == '-' && echo 1 || echo 0
 }
@@ -107,7 +107,7 @@ do
 done
 
 createString(){
-    chaine=""
+    local chaine=""
     for i in "$1"/*
     do
         if test -f "$i"
@@ -116,10 +116,11 @@ createString(){
         else
             if test -d "$i" -a $param_rec == true
             then
-                chaine=$chaine createString $i
+                chaine= createString $i
             fi
         fi
     done
-    echo $chaine
+    ch=$ch$chaine
 }
 createString $dirname
+echo $ch
