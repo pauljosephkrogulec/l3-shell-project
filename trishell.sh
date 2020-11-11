@@ -13,21 +13,22 @@ param_rep=false       # Vrai si on a bien un répertoire en paramètre, faux sin
 nsmletpg="nsmletpg"
 dirname=""
 ch=""
-isCommand() {
+
+function isCommand() {
     test ${1:0:1} == '-' && echo 1 || echo 0
 }
 # Fonciton qui vérifie si le premier paramètre est bien une commande d'appel résursif (-R)
-isRecursif() {
+function isRecursif() {
     test "$1" == "-R" && echo 1 || echo 0
 }
 
 # Fonciton qui vérifie si le premier paramètre est bien une commande pour trier de manière décroissante (-d)
-isDescending() {
+function isDescending() {
     test "$1" == "-d" && echo 1 || echo 0
 }
 
 
-isNsmletpg() {
+function isNsmletpg() {
     local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg
     local valid=1;local carac1;local carac2;local found_type
 
@@ -57,11 +58,9 @@ isNsmletpg() {
 }
 
 # Fonciton qui vérifie si le premier paramètre est bien une commande d'appel pour effecuter les tri (-nsmletpg)
-isDirectory() {
+function isDirectory() {
     test -d "$1" && echo 1 || echo 0
 }
-
-
 
 # On verifie si le paramètre 
 # on appelle une fonction qui verifie les paramètres
@@ -106,7 +105,7 @@ do
     fi
 done
 
-createString(){
+function createString() {
     local chaine=""
     for i in "$1"/*
     do
@@ -123,4 +122,4 @@ createString(){
     ch=$ch$chaine
 }
 createString $dirname
-echo $ch
+echo $(isNsmletpg $1)
