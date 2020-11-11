@@ -1,53 +1,66 @@
-#!/bin/bash
+#!/bin/sh
 
-# on vérifie si il existe un parmatrè.
+# on vérifie si il y a bien un répertoire passé en paramètre.
 test $# -lt 1 && echo "Need a command as parameter" && exit 1
 
+# Constantes
+SEPARATOR=":"
+NB_PARAM="$#"
+ALL_PARAM="$@"
+
 # Déclaration des variables
-nb_param="$#"         # nombre de paramètre
-all_param="$@"        # tous les paramètres
 param_rec=false       # Vrai si la commande -R est appelé, sinon faux.
 param_dec=false       # Vrai si la commande -d est appelé, sinon faux.
 param_nsmletpg=false  # Vrai si la commande -nsmletpg est appelé, sinon faux.
 param_rep=false       # Vrai si on a bien un répertoire en paramètre, faux sinon.
-nsmletpg="nsmletpg"
+
+nsmletpg="nsmletpg"   # on sauvegarde l'ensemble des critères de tris possibles.
 dirname=""
 ch=""
 
 function isCommand() {
+    # Fonction qui vérifie si le premier caractère du paramètre est un "-", si c'est le cas
+    # on retourne 1, sinon 0.
+
     test ${1:0:1} == '-' && echo 1 || echo 0
 }
-# Fonciton qui vérifie si le premier paramètre est bien une commande d'appel résursif (-R)
 function isRecursif() {
+    # Fonciton qui vérifie si le premier paramètre est bien une commande d'appel résursif (-R)
+    # Si c'est bien la commande -R, on retourne 1, sinon 0.
+
     test "$1" == "-R" && echo 1 || echo 0
 }
 
-# Fonciton qui vérifie si le premier paramètre est bien une commande pour trier de manière décroissante (-d)
 function isDescending() {
+    # Fonciton qui vérifie si le premier paramètre est bien une commande pour trier de manière décroissante (-d)
+    # Si c'est bien la commande -d, on retourne 1, sinon 0.
+
     test "$1" == "-d" && echo 1 || echo 0
 }
 
-
 function isNsmletpg() {
+    # Fonction qui vérifie si le premier paramètre est bien la commande qui spécifie les critères de tris utilisés.
+    # Si c'est bien la commande -nsmletpg on enregistre les critères et on retourne 1, sinon faux
+
     local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg
     local valid=1;local carac1;local carac2;local found_type
 
     while test $i -lt $lengthWord -a $valid -eq 1
-    do
+        do
         carac1=${1:i:1};found_type=0;j=0
         length_nsmletpg=`expr length $nsmletpg`
         while test $j -lt $length_nsmletpg -a $found_type -ne 1
-        do
+            do
             carac2=${nsmletpg:j:1}
             if test $carac1 == $carac2
-            then
+                then
                 found_type=1
             fi
             j=`expr $j + 1`
         done
 
         if test $found_type -ne 1
-        then
+            then
             valid=0
         fi
         
@@ -57,8 +70,10 @@ function isNsmletpg() {
     echo $valid
 }
 
-# Fonciton qui vérifie si le premier paramètre est bien une commande d'appel pour effecuter les tri (-nsmletpg)
 function isDirectory() {
+    # Fonction qui vérifie si le premier paramètre est bien un répertoire,
+    # Si c'est le cas, on retourne 1, sinon 0.
+
     test -d "$1" && echo 1 || echo 0
 }
 
@@ -67,30 +82,30 @@ function isDirectory() {
 i=1
 end=0
 while test $i -le $# -a $end -eq 0
-do  
+    do  
     if test $(isCommand $1) -eq 1
-    then
-        if test $param_rec != true -a $(isRecursif $1) -eq 1
         then
+        if test $param_rec != true -a $(isRecursif $1) -eq 1
+            then
             param_rec=true
         else
             if test $param_dec != true -a $(isDescending $1) -eq 1
-            then
+                then
                 param_dec=true
             else
                 if test $param_nsmletpg != true -a $(isNsmletpg $1) -eq 1
-                then
+                    then
                     param_nsmletpg=true
                 else
                     echo "invalid option -- '$1'"
                     exit 1
                     end=1
-            fi
+                fi
             fi
         fi
     else
         if test $param_rep != true -a $(isDirectory $1) -eq 1
-        then
+            then
             param_rep=true
             dirname=$1
         else
@@ -100,7 +115,7 @@ do
         fi
     fi
     if test $end -ne 1
-    then
+        then
         shift
     fi
 done
@@ -108,18 +123,19 @@ done
 function createString() {
     local chaine=""
     for i in "$1"/*
-    do
+        do
         if test -f "$i"
-        then
-            chaine=$chaine"$i@"
+            then
+            chaine=$chaine"$i$SEPARATOR"
         else
             if test -d "$i" -a $param_rec == true
-            then
+                then
                 chaine= createString $i
             fi
         fi
     done
     ch=$ch$chaine
 }
+
 createString $dirname
-echo $(isNsmletpg $1)
+echo $ch
