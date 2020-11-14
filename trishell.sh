@@ -7,16 +7,18 @@ test $# -lt 1 && echo "Need a command as parameter" && exit 1
 SEPARATOR=":"
 NB_PARAM="$#"
 ALL_PARAM="$@"
+ALL_TRI="nsmletpg"      # on défini l'ensemble des critères de tris possibles.
 
 # Déclaration des variables
-param_rec=false       # Vrai si la commande -R est appelé, sinon faux.
-param_dec=false       # Vrai si la commande -d est appelé, sinon faux.
-param_nsmletpg=false  # Vrai si la commande -nsmletpg est appelé, sinon faux.
-param_rep=false       # Vrai si on a bien un répertoire en paramètre, faux sinon.
+param_rec=0         # Indique du paramètre si la commande -R est appelé, sinon 0.
+param_dec=0         # Indique du paramètre si la commande -d est appelé, sinon 0.
+param_tri=0         # Indique du paramètre si la commande -nsmletpg est appelé, sinon 0.
+param_rep=0         # Indique du paramètre si on a bien un répertoire en paramètre, 0 sinon.
 
-nsmletpg="nsmletpg"   # on sauvegarde l'ensemble des critères de tris possibles.
-dirname=""
-ch=""
+save_rep=""         # on sauvegarde le répertoire donné en paramètre.
+save_tri=""         # on sauvegarde les critères de tris donnés en paramètre.
+
+files=""            # on sauvegarde dans la chaine l'ensemble des fichiers.
 
 function isCommand() {
     # Fonction qui vérifie si le premier caractère du paramètre est un "-", si c'est le cas
@@ -24,6 +26,7 @@ function isCommand() {
 
     test ${1:0:1} == '-' && echo 1 || echo 0
 }
+
 function isRecursif() {
     # Fonciton qui vérifie si le premier paramètre est bien une commande d'appel résursif (-R)
     # Si c'est bien la commande -R, on retourne 1, sinon 0.
@@ -38,20 +41,19 @@ function isDescending() {
     test "$1" == "-d" && echo 1 || echo 0
 }
 
-function isNsmletpg() {
+function isTris() {
     # Fonction qui vérifie si le premier paramètre est bien la commande qui spécifie les critères de tris utilisés.
     # Si c'est bien la commande -nsmletpg on enregistre les critères et on retourne 1, sinon faux
 
-    local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg
+    local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg=`expr length $ALL_TRI`
     local valid=1;local carac1;local carac2;local found_type
 
     while test $i -lt $lengthWord -a $valid -eq 1
         do
         carac1=${1:i:1};found_type=0;j=0
-        length_nsmletpg=`expr length $nsmletpg`
         while test $j -lt $length_nsmletpg -a $found_type -ne 1
             do
-            carac2=${nsmletpg:j:1}
+            carac2=${ALL_TRI:j:1}
             if test $carac1 == $carac2
                 then
                 found_type=1
@@ -77,65 +79,46 @@ function isDirectory() {
     test -d "$1" && echo 1 || echo 0
 }
 
-# On verifie si le paramètre 
-# on appelle une fonction qui verifie les paramètres
-i=1
-end=0
-while test $i -le $# -a $end -eq 0
-    do  
-    if test $(isCommand $1) -eq 1
-        then
-        if test $param_rec != true -a $(isRecursif $1) -eq 1
-            then
-            param_rec=true
-        else
-            if test $param_dec != true -a $(isDescending $1) -eq 1
-                then
-                param_dec=true
-            else
-                if test $param_nsmletpg != true -a $(isNsmletpg $1) -eq 1
-                    then
-                    param_nsmletpg=true
-                else
-                    echo "invalid option -- '$1'"
-                    exit 1
-                    end=1
-                fi
-            fi
-        fi
-    else
-        if test $param_rep != true -a $(isDirectory $1) -eq 1
-            then
-            param_rep=true
-            dirname=$1
-        else
-            echo "invalid option -- '$1'"
-            exit 2
-            end=1
-        fi
-    fi
-    if test $end -ne 1
-        then
-        shift
-    fi
-done
+function checkCommands() {
+    # Fonction qui va parcourir l'ensemble des éléments de la commande donnés en paramètre, et va vérifier si chaque type d'élément est valide.
+    # Si un élément n'est pas valide, ou valide mais qu'un autre élément du même type à déjà été rencontré... alors la commande donnée en paramètre
+    # est fausse et on sort du programme en indiquant l'option invalide.
 
-function createString() {
-    local chaine=""
-    for i in "$1"/*
+    local ind=1
+    for i in $ALL_PARAM
         do
-        if test -f "$i"
+        if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
             then
-            chaine=$chaine"$i$SEPARATOR"
+            param_rec="$ind"
+
+        elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
+            then
+            param_dec="$ind"
+
+        elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
+            then
+            param_tri="$ind"
+            save_tri="$i"
+        
+        elif test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
+            then
+            param_rep="$ind"
+
         else
-            if test -d "$i" -a $param_rec == true
-                then
-                chaine= createString $i
-            fi
+            echo "invalid option -- '$i'"
+            exit 2
         fi
+
+        ind=`expr $ind + 1`
     done
-    ch=$ch$chaine
 }
 
-createString $dirname
-echo $ch
+function main() {
+    # Fonction qui nb prend rien en paramètre et exécute le programme.
+
+    # On vérifie la commande donnée.
+    checkCommands
+}
+
+# on appelle la fonction main pour lancer le programme
+main
