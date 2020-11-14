@@ -18,7 +18,7 @@ param_rep=0         # Indique du paramètre si on a bien un répertoire en param
 save_rep=""         # on sauvegarde le répertoire donné en paramètre.
 save_tri=""         # on sauvegarde les critères de tris donnés en paramètre.
 
-files=""            # on sauvegarde dans la chaine l'ensemble des fichiers.
+stringFiles=""      # on sauvegarde dans la chaine l'ensemble des fichiers.
 
 function isCommand() {
     # Fonction qui vérifie si le premier caractère du paramètre est un "-", si c'est le cas
@@ -48,13 +48,13 @@ function isTris() {
     local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg=`expr length $ALL_TRI`
     local valid=1;local carac1;local carac2;local found_type
 
-    while test $i -lt $lengthWord -a $valid -eq 1
+    while test "$i" -lt $lengthWord -a $valid -eq 1
         do
         carac1=${1:i:1};found_type=0;j=0
         while test $j -lt $length_nsmletpg -a $found_type -ne 1
             do
             carac2=${ALL_TRI:j:1}
-            if test $carac1 == $carac2
+            if test "$carac1" == "$carac2"
                 then
                 found_type=1
             fi
@@ -103,6 +103,7 @@ function checkCommands() {
         elif test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
             then
             param_rep="$ind"
+            save_rep="$i"
 
         else
             echo "invalid option -- '$i'"
@@ -113,11 +114,32 @@ function checkCommands() {
     done
 }
 
+function createString() {
+    # Fonction qui à partir de du répertoire donné en paramètre de la commande,
+    # va stocker l'ensemble des fichiers en les séparant tous par le séparateur définit en constante ":"
+    # Si la chaine a été crée on retourne 1, sinon 0
+
+    local chaine=""
+    for i in "$1"/*
+    do
+        if test -f "$i"
+        then
+            chaine=$chaine"$i$SEPARATOR"
+        elif test -d "$i" -a $param_rec -ne 0
+            then
+            chaine= createString $i
+        fi
+    done
+    stringFiles=$stringFiles$chaine
+}
+
 function main() {
     # Fonction qui nb prend rien en paramètre et exécute le programme.
 
     # On vérifie la commande donnée.
     checkCommands
+    createString $save_rep
+    echo $stringFiles
 }
 
 # on appelle la fonction main pour lancer le programme
