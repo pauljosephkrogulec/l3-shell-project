@@ -114,23 +114,36 @@ function checkCommands() {
     done
 }
 
+function linesInFile() {
+    # Fonction qui prend en paramètre un fichier et retourne son nombre de lignes.
+    # Pas optimisé car elle met pas mal de temps si le fichier fait plus de 500 lignes
+    
+    local cpt=0
+    while read line
+        do 
+        cpt=`expr $cpt + 1`
+    done < $1
+    echo $cpt
+}
+
 function createString() {
     # Fonction qui à partir de du répertoire donné en paramètre de la commande,
     # va stocker l'ensemble des fichiers en les séparant tous par le séparateur définit en constante ":"
     # Si la chaine a été crée on retourne 1, sinon 0
 
-    local chaine=""
+    local ch=""
     for i in "$1"/*
     do
         if test -f "$i"
-        then
-            chaine=$chaine"$i$SEPARATOR"
+            then
+            ch=$ch"$i$SEPARATOR"
+
         elif test -d "$i" -a $param_rec -ne 0
             then
-            chaine= createString $i
+            ch= createString $i
         fi
-    done
-    stringFiles=$stringFiles$chaine
+    done    
+    stringFiles=$stringFiles$ch
 }
 
 function main() {
