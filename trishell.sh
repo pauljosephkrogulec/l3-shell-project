@@ -118,7 +118,7 @@ function checkCommands() {
 }
 
 function nameInFile(){
-    echo ${1%.*}
+    echo $(basename $1)
 }
 function sizeInFile(){
     echo $(stat -c "%s" $1)
@@ -145,18 +145,18 @@ function createString() {
     # va stocker l'ensemble des fichiers en les séparant tous par le séparateur définit en constante ":"
     # Si la chaine a été crée on retourne 1, sinon 0
 
-    local ch="["
+    local ch=""
     for i in "$1"/*
     do
         if test -f "$i"
             then
-            ch="$ch$i$SEPARATOR"
+            ch="$ch$(nameInFile $i)$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
-            ch="$ch$(createString $i)"
+            ch="$ch[$(nameInFile $i)@$(createString $i)]"
         fi
     done
-    ch="$ch]"
+    ch="$ch"
     echo $ch
 }
 
