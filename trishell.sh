@@ -8,7 +8,6 @@ SEPARATOR=":"
 NB_PARAM="$#"
 ALL_PARAM="$@"
 ALL_TRI="nsmletpg"      # on défini l'ensemble des critères de tris possibles.
-PARAM="$0 "
 # Déclaration des variables
 param_rec=0         # Indique du paramètre si la commande -R est appelé, sinon 0.
 param_dec=0         # Indique du paramètre si la commande -d est appelé, sinon 0.
@@ -150,10 +149,10 @@ function createString() {
     do
         if test -f "$i"
             then
-            ch="$ch$(nameInFile $i)$SEPARATOR"
+            ch="$ch$i$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
-            ch="$ch[$(nameInFile $i)@$(createString $i)]"
+            ch="$ch[$(createString $i)]"
         fi
     done
     ch="$ch"
