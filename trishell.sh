@@ -157,7 +157,6 @@ function createString() {
         fi
     done
     ch="$ch]"
-    
     echo $ch
 }
 
@@ -166,7 +165,7 @@ function main() {
 
     # On vérifie la commande donnée.
     checkCommands
-    createString $save_rep
+    stringFiles=$(createString $save_rep)
     echo $stringFiles
 }
 
