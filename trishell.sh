@@ -150,7 +150,7 @@ function createString() {
     do
         if test -f "$i"
             then
-            ch="$ch""$i$SEPARATOR"
+            ch="$ch$i$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
             ch="$ch$(bash $PARAM$i)"
