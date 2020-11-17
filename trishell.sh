@@ -153,10 +153,12 @@ function createString() {
             ch="$ch$i$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
-            ch="$ch$(bash $PARAM$i)"
+            ch="$ch$(createString $i)"
         fi
     done
-    stringFiles="$stringFiles$ch]"
+    ch="$ch]"
+    
+    echo $ch
 }
 
 function main() {
