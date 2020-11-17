@@ -145,7 +145,7 @@ function createString() {
     # va stocker l'ensemble des fichiers en les séparant tous par le séparateur définit en constante ":"
     # Si la chaine a été crée on retourne 1, sinon 0
 
-    local ch=""
+    local ch="["
     for i in "$1"/*
     do
         if test -f "$i"
@@ -153,10 +153,10 @@ function createString() {
             ch="$ch""$i$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
-            ch=$ch$(bash $PARAM$i)
+            ch="$ch$(bash $PARAM$i)"
         fi
-    done    
-    stringFiles=$stringFiles$ch
+    done
+    stringFiles="$stringFiles$ch]"
 }
 
 function main() {
@@ -169,4 +169,4 @@ function main() {
 }
 
 # on appelle la fonction main pour lancer le programme
-echo $(main)
+main
