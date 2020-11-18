@@ -2,7 +2,7 @@
 
 # on vérifie si il y a bien un répertoire passé en paramètre.
 test $# -lt 1 && echo "Need a command as parameter" && exit 1
-
+test $# -ge 5 && echo "Too many parameters (4 max)" && exit 2
 # Constantes
 SEPARATOR=":"
 NB_PARAM="$#"
@@ -89,18 +89,15 @@ function checkCommands() {
         if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
             then
             param_rec="$ind"
-            PARAM=$PARAM"$i "
 
         elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
             then
             param_dec="$ind"
-            PARAM=$PARAM"$i "
 
         elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
             then
             param_tri="$ind"
             save_tri="$i"
-            PARAM=$PARAM"$i "
         
         elif test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
             then
@@ -109,7 +106,7 @@ function checkCommands() {
 
         else
             echo "invalid option -- '$i'"
-            exit 2
+            exit 3
         fi
 
         ind=`expr $ind + 1`
@@ -164,6 +161,11 @@ function main() {
 
     # On vérifie la commande donnée.
     checkCommands
+    if test $param_rep -eq 0
+    then 
+        echo "error no directory found"
+        exit 4
+    fi
     stringFiles=$(createString $save_rep)
     echo $stringFiles
 }
