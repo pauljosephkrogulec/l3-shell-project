@@ -174,13 +174,32 @@ function compareText(){
 function compareNumber(){
     test $1 -gt $2 && echo 1 || echo 0
 }
+function printString() {
+    # Fonction qui va parcourir la chaine de caractère stringFiles contenant l'ensemble des fichiers du paramètres données.
+    # Et va afficher les fichiers séparés par un séparateur ":"
+
+    local len=`expr length $stringFiles`; local ch=""
+    local carac=""
+    for i in `seq 0 $len`
+        do
+        carac=${stringFiles:i:1}
+        if test "$carac" == $SEPARATOR
+            then
+            echo "$ch"
+            ch=""
+        else
+            ch=$ch"$carac"
+        fi
+    done
+}
+
 function main() {
     # Fonction qui nb prend rien en paramètre et exécute le programme.
 
     # On vérifie la commande donnée.
     checkCommands
     stringFiles=$(createString $save_rep)
-    echo $stringFiles
+    printString
 }
 
 # on appelle la fonction main pour lancer le programme
