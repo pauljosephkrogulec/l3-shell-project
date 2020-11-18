@@ -111,6 +111,11 @@ function checkCommands() {
 
         ind=`expr $ind + 1`
     done
+    if test $param_rep -eq 0
+    then 
+        echo "error no directory found"
+        exit 4
+    fi
 }
 
 function nameInFile(){
@@ -161,11 +166,6 @@ function main() {
 
     # On vérifie la commande donnée.
     checkCommands
-    if test $param_rep -eq 0
-    then 
-        echo "error no directory found"
-        exit 4
-    fi
     stringFiles=$(createString $save_rep)
     echo $stringFiles
 }
