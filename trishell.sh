@@ -162,13 +162,18 @@ function createString() {
             ch="$ch$i$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
-            ch="$ch[$(createString $i)]"
+            ch="$ch$(createString $i)"
         fi
     done
     ch="$ch"
     echo $ch
 }
-
+function compareText(){
+    test $1 \> $2 && echo 1 || echo 0
+}
+function compareNumber(){
+    test $1 -gt $2 && echo 1 || echo 0
+}
 function main() {
     # Fonction qui nb prend rien en paramètre et exécute le programme.
 
