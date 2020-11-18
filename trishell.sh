@@ -3,6 +3,7 @@
 # on vérifie si il y a bien un répertoire passé en paramètre.
 test $# -lt 1 && echo "Need a command as parameter" && exit 1
 test $# -ge 5 && echo "Too many parameters (4 max)" && exit 2
+
 # Constantes
 SEPARATOR=":"
 NB_PARAM="$#"
@@ -86,58 +87,70 @@ function checkCommands() {
     local ind=1
     for i in $ALL_PARAM
         do
-        if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
-            then
-            param_rec="$ind"
-
-        elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
-            then
-            param_dec="$ind"
-
-        elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
-            then
-            param_tri="$ind"
-            save_tri="$i"
         
-        elif test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
+        if test $(isCommand $i) -eq 1
             then
-            param_rep="$ind"
-            save_rep="$i"
+            if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
+                then
+                param_rec="$ind"
 
+            elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
+                then
+                param_dec="$ind"
+
+            elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
+                then
+                param_tri="$ind"
+                save_tri="$i"
+            fi
         else
-            echo "invalid option -- '$i'"
-            exit 3
+            if test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
+                then
+                param_rep="$ind"
+                save_rep="$i"
+            else
+                echo "invalid option -- '$i'"
+                exit 3
+            fi
         fi
 
         ind=`expr $ind + 1`
     done
-    if test $param_rep -eq 0
-    then 
-        echo "error no directory found"
-        exit 4
-    fi
+    test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 4
 }
 
-function nameInFile(){
+function nameFile() {
+   # Fonction qui prend en paramètre un fichier et retourne son nom.
     echo $(basename $1)
 }
-function sizeInFile(){
+
+function sizeFile() {
+    # Fonction qui prend en paramètre un fichier et retourne sa taille.
     echo $(stat -c "%s" $1)
 }
-function dateInFile(){
+
+function lastDateFile() {
+    # Fonction qui prend en paramètre un fichier et retourne la date de sa dernière modification.
     echo $(stat -c "%y" $1)
 }
-function linesInFile() {
+
+function linesFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nombre de lignes.
    echo $(sed -n '$=' $1)
 }
-function extInFile(){
+
+function extensionFile() {
+    # Fonction qui prend en paramètre un fichier et retourne son extension.
     echo $(sed 's/^.*\(...$\)/\1/' <<< $1)
 }
-function ownerInFile(){
+
+function ownerFile() {
+    # Fonction qui prend en paramètre un fichier et retourne le propriétaire.
     echo $(stat -c "%U" $1)
 }
-function groupInfile(){
+
+function groupFile() {
+    # Fonction qui prend en paramètre un fichier et retourne le groupe du propriétaire.
     echo $(stat -c "%G" $1)
 }
 
