@@ -85,35 +85,37 @@ function checkCommands() {
     # est fausse et on sort du programme en indiquant l'option invalide.
 
     local ind=1
+    local found
     for i in $ALL_PARAM
         do
-        
+        found=0
         if test $(isCommand $i) -eq 1
             then
             if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
                 then
                 param_rec="$ind"
+                found=1
 
             elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
                 then
                 param_dec="$ind"
+                found=1
 
             elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
                 then
                 param_tri="$ind"
                 save_tri="$i"
+                found=1
             fi
         else
             if test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
                 then
                 param_rep="$ind"
                 save_rep="$i"
-            else
-                echo "invalid option -- '$i'"
-                exit 3
+                found=1
             fi
         fi
-
+        test $found -eq 0 && echo "invalid option -- '$i'" && exit 3
         ind=`expr $ind + 1`
     done
     test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 4
