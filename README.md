@@ -1,7 +1,6 @@
 # l3-shell-project
 
 Sépérateur de mot = :
-Sépérateur de dossier = []
 
 ####
 - Peut on faire une commande de la forme : trishell rep (sans param)
