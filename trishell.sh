@@ -169,10 +169,26 @@ function createString() {
     echo $ch
 }
 function compareText(){
-    test $1 \> $2 && echo 1 || echo 0
+    if test $1 \> $2 
+    then
+        echo 1
+    elif test $1 == $2 
+    then
+        echo 0
+    else
+        echo -1
+    fi
 }
 function compareNumber(){
-    test $1 -gt $2 && echo 1 || echo 0
+    if test $1 -gt $2 
+    then
+        echo 1
+    elif test $1 -eq $2 
+    then
+        echo 0
+    else
+        echo -1
+    fi
 }
 function printString() {
     # Fonction qui va parcourir la chaine de caractère stringFiles contenant l'ensemble des fichiers du paramètres données.
