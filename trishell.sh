@@ -235,17 +235,17 @@ function compareNumber() {
 function tri_d() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
-
-    local i=$nbFiles
+    
+    local i=$(countFiles $1)
     local newString="";local word=""
 
     while test "$i" -ne 0
         do
-        word=$(echo $stringFiles | cut -d':' -f"$i")
+        word=$(echo $1 | cut -d':' -f"$i")
         newString=$newString"$word"$SEPARATOR
         i=`expr $i - 1`
     done
-    stringFiles="$newString"
+    echo "$newString"
 }
 
 function tri_n() {
@@ -288,6 +288,8 @@ function main() {
     # On vérifie la commande donnée.
     checkCommands
     createString $save_rep
+    printString $stringFiles
+    stringFiles=$(tri_d $stringFiles)
     printString $stringFiles
 }
 
