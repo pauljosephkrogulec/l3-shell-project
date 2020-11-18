@@ -3,7 +3,6 @@
 # on vérifie si il y a bien un répertoire passé en paramètre.
 test $# -lt 1 && echo "Need a command as parameter" && exit 1
 test $# -ge 5 && echo "Too many parameters (4 max)" && exit 2
-
 # Constantes
 SEPARATOR=":"
 NB_PARAM="$#"
@@ -84,8 +83,7 @@ function checkCommands() {
     # Si un élément n'est pas valide, ou valide mais qu'un autre élément du même type à déjà été rencontré... alors la commande donnée en paramètre
     # est fausse et on sort du programme en indiquant l'option invalide.
 
-    local ind=1
-    local found
+    local ind=1; local found
     for i in $ALL_PARAM
         do
         found=0
@@ -93,28 +91,23 @@ function checkCommands() {
             then
             if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
                 then
-                param_rec="$ind"
-                found=1
+                param_rec="$ind"; found=1
 
             elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
                 then
-                param_dec="$ind"
-                found=1
+                param_dec="$ind"; found=1
 
             elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
                 then
-                param_tri="$ind"
-                save_tri="$i"
-                found=1
+                param_tri="$ind"; save_tri="$i"; found=1
             fi
         else
             if test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
                 then
-                param_rep="$ind"
-                save_rep="$i"
-                found=1
+                param_rep="$ind"; save_rep="$i"; found=1
             fi
         fi
+
         test $found -eq 0 && echo "invalid option -- '$i'" && exit 3
         ind=`expr $ind + 1`
     done
