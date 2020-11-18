@@ -1,14 +1,21 @@
-#!/bin/sh
+#!/bin/bash
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                                     #
+#                           Projet de Shell                           #
+#       Réalisé par Quentin Carpentier & Paul-Joseph Krogulec         #
+#   GitHub : https://github.com/pauljosephkrogulec/l3-shell-project   #
+#                                                                     #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # on vérifie si il y a bien un répertoire passé en paramètre.
 test $# -lt 1 && echo "Need a command as parameter" && exit 1
-
+test $# -ge 5 && echo "Too many parameters (4 max)" && exit 2
 # Constantes
 SEPARATOR=":"
 NB_PARAM="$#"
 ALL_PARAM="$@"
 ALL_TRI="nsmletpg"      # on défini l'ensemble des critères de tris possibles.
-
 # Déclaration des variables
 param_rec=0         # Indique du paramètre si la commande -R est appelé, sinon 0.
 param_dec=0         # Indique du paramètre si la commande -d est appelé, sinon 0.
@@ -84,46 +91,70 @@ function checkCommands() {
     # Si un élément n'est pas valide, ou valide mais qu'un autre élément du même type à déjà été rencontré... alors la commande donnée en paramètre
     # est fausse et on sort du programme en indiquant l'option invalide.
 
-    local ind=1
+    local ind=1; local found
     for i in $ALL_PARAM
         do
-        if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
+        found=0
+        if test $(isCommand $i) -eq 1
             then
-            param_rec="$ind"
+            if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
+                then
+                param_rec="$ind"; found=1
 
-        elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
-            then
-            param_dec="$ind"
+            elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
+                then
+                param_dec="$ind"; found=1
 
-        elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
-            then
-            param_tri="$ind"
-            save_tri="$i"
-        
-        elif test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
-            then
-            param_rep="$ind"
-            save_rep="$i"
-
+            elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
+                then
+                param_tri="$ind"; save_tri="$i"; found=1
+            fi
         else
-            echo "invalid option -- '$i'"
-            exit 2
+            if test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
+                then
+                param_rep="$ind"; save_rep="$i"; found=1
+            fi
         fi
 
+        test $found -eq 0 && echo "invalid option -- '$i'" && exit 3
         ind=`expr $ind + 1`
     done
+    test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 4
 }
 
-function linesInFile() {
-    # Fonction qui prend en paramètre un fichier et retourne son nombre de lignes.
-    # Pas optimisé car elle met pas mal de temps si le fichier fait plus de 500 lignes
-    
-    local cpt=0
-    while read line
-        do 
-        cpt=`expr $cpt + 1`
-    done < $1
-    echo $cpt
+function nameFile() {
+   # Fonction qui prend en paramètre un fichier et retourne son nom.
+    echo $(basename $1)
+}
+
+function sizeFile() {
+    # Fonction qui prend en paramètre un fichier et retourne sa taille.
+    echo $(stat -c "%s" $1)
+}
+
+function lastDateFile() {
+    # Fonction qui prend en paramètre un fichier et retourne la date de sa dernière modification.
+    echo $(stat -c "%y" $1)
+}
+
+function linesFile() {
+   # Fonction qui prend en paramètre un fichier et retourne son nombre de lignes.
+   echo $(sed -n '$=' $1)
+}
+
+function extensionFile() {
+    # Fonction qui prend en paramètre un fichier et retourne son extension.
+    echo $(sed 's/^.*\(...$\)/\1/' <<< $1)
+}
+
+function ownerFile() {
+    # Fonction qui prend en paramètre un fichier et retourne le propriétaire.
+    echo $(stat -c "%U" $1)
+}
+
+function groupFile() {
+    # Fonction qui prend en paramètre un fichier et retourne le groupe du propriétaire.
+    echo $(stat -c "%G" $1)
 }
 
 function createString() {
@@ -136,14 +167,63 @@ function createString() {
     do
         if test -f "$i"
             then
-            ch=$ch"$i$SEPARATOR"
-
+            ch="$ch$i$SEPARATOR"
         elif test -d "$i" -a $param_rec -ne 0
             then
-            ch= createString $i
+            ch="$ch$(createString $i)"
         fi
-    done    
-    stringFiles=$stringFiles$ch
+    done
+    ch="$ch"
+    echo $ch
+}
+
+function printString() {
+    # Fonction qui va parcourir la chaine de caractère stringFiles contenant l'ensemble des fichiers du paramètres données.
+    # Et va afficher les fichiers séparés par un séparateur ":"
+
+    local len=`expr length $stringFiles`; local ch=""
+    local carac=""
+
+    for i in `seq 0 $len`
+        do
+        carac=${stringFiles:i:1}
+        if test "$carac" == $SEPARATOR
+            then
+            echo "$ch"
+            ch=""
+        else
+            ch=$ch"$carac"
+        fi
+    done
+}
+
+function compareText() {
+    if test $1 \> $2 
+        then
+        echo 1
+    elif test $1 \< $2 
+        then
+        echo -1
+    else
+        echo 0
+    fi
+}
+function compareNumber() {
+    if test $1 -gt $2 
+        then
+        echo 1
+    elif test $1 -eq $2 
+        then
+        echo 0
+    else
+        echo -1
+    fi
+}
+
+function tri_d() {
+    # Fonction qui prend en paramètre une chaine de caractère contenant les fichiers,
+    # et va trier cette chaine de manière décroissante.
+
 }
 
 function main() {
@@ -151,8 +231,9 @@ function main() {
 
     # On vérifie la commande donnée.
     checkCommands
-    createString $save_rep
+    stringFiles=$(createString $save_rep)
     echo $stringFiles
+    printString
 }
 
 # on appelle la fonction main pour lancer le programme
