@@ -313,7 +313,10 @@ function main() {
     createString $save_rep
     
     tri_n $stringFiles
-    stringFiles=$(tri_d $stringFiles)
+    if test $param_dec -ne 0
+        then
+        stringFiles=$(tri_d $stringFiles)
+    fi
     printString $stringFiles
 }
 
