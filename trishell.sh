@@ -124,7 +124,7 @@ function checkCommands() {
 
 function nameFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nom.
-    echo $(basename $1)
+    echo .$(echo $1 | cut -d'.' -f2)
 }
 
 function sizeFile() {
@@ -252,30 +252,53 @@ function tri_n() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
 
-    local i=1;local j=1
-    local newString="";local file="";local file2="";local numberF=0;local name1="";local name2=""
-
-    while test "$i" -le "$nbFiles"
+    local i=1;local j=1;local k=1; local cpt=0
+    local newString="";local file="";local file2="";local numberF=0;local name1="";local name2="";local tmp=""
+    local len=$(countFiles $1)
+    while test "$i" -le "$len"
         do
-        file=$(echo $stringFiles | cut -d':' -f"$i")
-
+        file=$(echo $1 | cut -d':' -f"$i")
         if test $numberF -eq 0
             then
-            newString="$file"
+            newString="$file:"
+            numberF=1
         else
-            j=0;found=0
-            name1=$(basename $file)
-            while test "$j" -le "$numberF"
+            j=1;found=0
+            name1=$(nameFile $file)
+            file2=$(echo $newString | cut -d':' -f1)
+            name2=$(nameFile $file2)
+            while test $(compareText $name2 $name1) -ne 1 -a $j -le $numberF
                 do
-                file2=$(echo $newString | cut -d':' -f"$i")
-                name2=$(basename $file2)
-
-                local cmp=$(compareTest $name1 $name2)                
+                j=`expr $j + 1`
+                file2=$(echo $newString | cut -d':' -f"$j")
+                name2=$(nameFile $file2)
+                cpt=$j
             done
+            if test $cpt -gt $numberF 
+                then 
+                newString="$newString$file:"
+                numberF=`expr $numberF + 1`
+            else
+                if test $(compareText $name2 $name1) -eq 1
+                    then
+                    cpt=`expr $cpt + 1`
+                    while test $k -lt $cpt
+                        do
+                        tmp="$tmp$(echo $newString | cut -d':' -f"$k")":
+                        k=`expr $k + 1`
+                    done
+                    tmp="$tmp$file:"
+                    cpt=`expr $cpt + 1`
+                    while test $cpt -lt $numberF
+                        do
+                        tmp="$tmp$(echo $newString | cut -d':' -f"$k"):"
+                        cpt=`expr $cpt + 1`
+                    done
+                    newString=$tmp
+                    numberF=`expr $numberF + 1`
+                fi
+            fi
         fi
-        
-
-        newString=$newString"$word"$SEPARATOR
         i=`expr $i + 1`
     done
     stringFiles="$newString"
@@ -288,10 +311,11 @@ function main() {
     # On vérifie la commande donnée.
     checkCommands
     createString $save_rep
-    printString $stringFiles
+    
+    tri_n $stringFiles
     stringFiles=$(tri_d $stringFiles)
     printString $stringFiles
 }
 
 # on appelle la fonction main pour lancer le programme
-main
+main 
