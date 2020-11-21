@@ -195,7 +195,7 @@ function countFiles() {
             ch=$ch"$carac"
         fi
     done
-    echo "$res"
+    echo $res
 }
 
 function printString() {
@@ -234,6 +234,26 @@ function compareNumber() {
     fi
 }
 
+function replaceFile() {
+    local i=1;
+    local len=$(countFiles $1)
+    local newString="";local file=""
+
+    while test $i -le $len
+        do
+        file=$(echo $1 | cut -d':' -f"$i")
+        if test $i -eq $2
+            then
+            newString="$newString$3$SEPARATOR"
+        else
+            newString="$newString$file$SEPARATOR"
+        fi
+        i=`expr $i + 1`
+    done
+    echo "$newString"
+
+    
+}
 function sortDescending() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
@@ -250,69 +270,41 @@ function sortDescending() {
     echo "$newString"
 }
 
-function sortByName() {
+function sortN() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
 
-    local i=1;local j=1;local k=1; local cpt=0
-    local newString="";local file="";local file2="";local numberF=0;local name1="";local name2="";local tmp=""
-    local len=$(countFiles $1)
-    while test "$i" -le "$len"
+    local newString=$1;local word="";local word_mini="";local ref=""
+    local len=$(countFiles $1);local i=1;local j;local mini=0
+
+    while test $i -le $len
         do
-        file=$(echo $1 | cut -d':' -f"$i")
-        if test $numberF -eq 0
-            then
-            newString="$file:"
-            numberF=1
-        else
-            j=1;found=0
-            name1=$(nameFile $file)
-            file2=$(echo $newString | cut -d':' -f1)
-            name2=$(nameFile $file2)
-            while test $(compareText $name2 $name1) -ne 1 -a $j -le $numberF
-                do
-                j=`expr $j + 1`
-                file2=$(echo $newString | cut -d':' -f"$j")
-                name2=$(nameFile $file2)
-                cpt=$j
-            done
-            if test $cpt -gt $numberF 
-                then 
-                newString="$newString$file:"
-                numberF=`expr $numberF + 1`
-            else
-                if test $(compareText $name2 $name1) -eq 1
-                    then
-                    cpt=`expr $cpt + 1`
-                    while test $k -lt $cpt
-                        do
-                        tmp="$tmp$(echo $newString | cut -d':' -f"$k")":
-                        k=`expr $k + 1`
-                    done
-                    tmp="$tmp$file:"
-                    cpt=`expr $cpt + 1`
-                    while test $cpt -lt $numberF
-                        do
-                        tmp="$tmp$(echo $newString | cut -d':' -f"$k"):"
-                        cpt=`expr $cpt + 1`
-                    done
-                    newString=$tmp
-                    numberF=`expr $numberF + 1`
-                fi
-            fi
-        fi
+        mini="$i"
+        j="$i"
+        while test "$j" -le "$len"
+            do
+            word=$(echo $newString | cut -d':' -f"$j")
+            word_mini=$(echo $newString | cut -d':' -f"$mini")
+            test $(compareText $word $word_mini) -eq -1 && mini=$j
+            j=`expr $j + 1`
+        done
+        word=$(echo $newString | cut -d':' -f"$i")
+        word_mini=$(echo $newString | cut -d':' -f"$mini")
+        ref="$word"
+        newString=$(replaceFile $newString $i $word_mini)
+        newString=$(replaceFile $newString $mini $ref)
         i=`expr $i + 1`
     done
-    echo "$newString"
+    stringFiles=$newString
 }
 
 function sortString {
     # Fonction qui ne prend rien en paramètre,
     # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
 
-    stringFiles=$(sortByName $stringFiles)
-    
+    sortN $stringFiles
     test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
+
 }
 
 function main() {
