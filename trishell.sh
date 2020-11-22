@@ -126,7 +126,7 @@ function checkCommands() {
 
 function nameFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nom.
-    echo .$(echo $1 | cut -d'.' -f2)
+    echo $(basename $1)
 }
 
 function sizeFile() {
@@ -234,26 +234,6 @@ function compareNumber() {
     fi
 }
 
-function replaceFile() {
-    local i=1;
-    local len=$(countFiles $1)
-    local newString="";local file=""
-
-    while test $i -le $len
-        do
-        file=$(echo $1 | cut -d':' -f"$i")
-        if test $i -eq $2
-            then
-            newString="$newString$3$SEPARATOR"
-        else
-            newString="$newString$file$SEPARATOR"
-        fi
-        i=`expr $i + 1`
-    done
-    echo "$newString"
-
-    
-}
 function sortDescending() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
@@ -270,39 +250,39 @@ function sortDescending() {
     echo "$newString"
 }
 
-function sortN() {
+function sortByName() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
 
     local newString=$1;local word="";local word_mini="";local ref=""
     local len=$(countFiles $1);local i=1;local j;local mini=0
 
-    while test $i -le $len
+    for i in `seq 1 $len`
         do
         mini="$i"
         j="$i"
-        while test "$j" -le "$len"
+        for j in `seq $i $len`
             do
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
-            test $(compareText $word $word_mini) -eq -1 && mini=$j
-            j=`expr $j + 1`
+            test $(compareText $(nameFile $word) $(nameFile $word_mini)) -eq -1 && mini=$j
         done
         word=$(echo $newString | cut -d':' -f"$i")
         word_mini=$(echo $newString | cut -d':' -f"$mini")
-        ref="$word"
-        newString=$(replaceFile $newString $i $word_mini)
-        newString=$(replaceFile $newString $mini $ref)
-        i=`expr $i + 1`
+
+        # on remplace inverse les fichiers dans la chaine
+        newString=$(awk -v a="$word_mini" 'BEGIN{FS=OFS=":"} {$'$i'=a; print}' <<< "$newString")
+        newString=$(awk -v a="$word" 'BEGIN{FS=OFS=":"} {$'$mini'=a; print}' <<< "$newString")
     done
-    stringFiles=$newString
+    echo "$newString"
 }
 
 function sortString {
     # Fonction qui ne prend rien en paramètre,
     # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
 
-    sortN $stringFiles
+    stringFiles=$(sortByName $stringFiles)
+    
     test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
 
 }
