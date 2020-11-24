@@ -126,7 +126,8 @@ function checkCommands() {
 
 function nameFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nom.
-    echo $(basename $1)
+    local file=$(basename $1)
+    echo ${file%%.*}
 }
 
 function sizeFile() {
@@ -136,7 +137,7 @@ function sizeFile() {
 
 function lastDateFile() {
     # Fonction qui prend en paramètre un fichier et retourne la date de sa dernière modification.
-    echo $(stat -c "%y" $1)
+    echo $(stat -c "%Y" $1)
 }
 
 function linesFile() {
@@ -146,7 +147,7 @@ function linesFile() {
 
 function extensionFile() {
     # Fonction qui prend en paramètre un fichier et retourne son extension.
-    echo $(sed 's/^.*\(...$\)/\1/' <<< $1)
+    echo ${1##*.}
 }
 
 function ownerFile() {
@@ -208,7 +209,7 @@ function printString() {
     for i in `seq 1 $nbFiles`
         do
         file="$(echo $1 | cut -d':' -f"$i")"
-        echo -e "$file \t\t : $(sizeFile $file)"
+        echo -e "$file \t\t : $(groupFile $file)"
     done
 }
 
@@ -256,7 +257,7 @@ function sortByOption() {
     # et va trier cette chaine selon le nom des fichiers. (méthode de tri par sélection)
 
     local newString="$1";local word="";local word_mini="";local ref="";local tmp=0
-    local len=$(countFiles $1);local i=1;local j;local mini=0
+    local len=$(countFiles $1);local i=1;local j;local mini=0;local val_word="";local val_mini=""
 
     for i in `seq 1 $len`
         do
@@ -267,17 +268,17 @@ function sortByOption() {
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
 
-            local val1="$($2 $word)"
-            local val2="$($2 $word_mini)"
+            val_word="$($2 $word)"
+            val_mini="$($2 $word_mini)"
 
-            test -z $val1 && val1=0
-            test -z $val2 && val2=0
+            test -z "$val_word" && val_word=0
+            test -z "$val_mini" && val_mini=0
 
-            if test "$2" == "linesFile" -a "$2" == "sizeFile"
+            if test "$2" == "linesFile" -o "$2" == "sizeFile"
                 then
-                test $(compareNumber $val1 $val2) -eq -1 && mini="$j"
+                test $(compareNumber "$val_word" "$val_mini") -eq -1 && mini="$j"
             else
-                test $(compareText $val1 $val2) -eq -1 && mini="$j"
+                test $(compareText "$val_word" "$val_mini") -eq -1 && mini="$j"
             fi
         done
         word=$(echo $newString | cut -d':' -f"$i")
@@ -306,16 +307,16 @@ function sortString {
         # si on appel le critère "m", on exécute la fonction qui trie la chaine par la taille des entrées.
         "m") newString=$(sortByOption $1 lastDateFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "sl", on exécute la fonction qui trie la chaine par la taille des entrées.
         "l") newString=$(sortByOption $1 linesFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "e", on exécute la fonction qui trie la chaine par la taille des entrées.
         "e") newString=$(sortByOption $1 extensionFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "p", on exécute la fonction qui trie la chaine par la taille des entrées.
         "p") newString=$(sortByOption $1 ownerFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "g", on exécute la fonction qui trie la chaine par la taille des entrées.
         "g") newString=$(sortByOption $1 groupFile $2);;
         *) echo "$newString";;
     esac
