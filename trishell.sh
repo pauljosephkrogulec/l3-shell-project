@@ -118,10 +118,10 @@ function checkCommands() {
             fi
         fi
 
-        test $found -eq 0 && echo "invalid option -- '$i'" && exit 3
+        test $found -eq 0 && echo "invalid option -- '$i'" && exit 4
         ind=`expr $ind + 1`
     done
-    test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 4
+    test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 5
 }
 
 function nameFile() {
@@ -202,12 +202,13 @@ function printString() {
     # Fonction qui va parcourir la chaine de caractère stringFiles contenant l'ensemble des fichiers du paramètres données.
     # Et va afficher les fichiers séparés par un séparateur ":"
 
-    local i=1;local nbFiles=$(countFiles $1)
+    local i=1;local nbFiles=$(countFiles $1);
+    local file=""
 
-    while test "$i" -le "$nbFiles"
+    for i in `seq 1 $nbFiles`
         do
-        echo $(echo $1 | cut -d':' -f"$i")
-        i=`expr $i + 1`
+        file="$(echo $1 | cut -d':' -f"$i")"
+        echo -e "$file \t\t : $(linesFile $file)"
     done
 }
 
@@ -250,11 +251,11 @@ function sortDescending() {
     echo "$newString"
 }
 
-function sortByName() {
-    # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
-    # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
+function sortByOption() {
+    # Fonction qui prend en paramètre une chaine de caractère de fichiers,
+    # et va trier cette chaine selon le nom des fichiers. (méthode de tri par sélection)
 
-    local newString=$1;local word="";local word_mini="";local ref=""
+    local newString="$1";local word="";local word_mini="";local ref="";local tmp=0
     local len=$(countFiles $1);local i=1;local j;local mini=0
 
     for i in `seq 1 $len`
@@ -265,7 +266,19 @@ function sortByName() {
             do
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
-            test $(compareText $(nameFile $word) $(nameFile $word_mini)) -eq -1 && mini=$j
+
+            local val1="$($2 $word)"
+            local val2="$($2 $word_mini)"
+
+            test -z $val1 && val1=0
+            test -z $val2 && val2=0
+
+            if test "$2" == "linesFile"
+                then
+                test $(compareNumber $val1 $val2) -eq -1 && mini="$j"
+            else
+                test $(compareText $val1 $val2) -eq -1 && mini="$j"
+            fi
         done
         word=$(echo $newString | cut -d':' -f"$i")
         word_mini=$(echo $newString | cut -d':' -f"$mini")
@@ -280,10 +293,35 @@ function sortByName() {
 function sortString {
     # Fonction qui ne prend rien en paramètre,
     # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
+    local i="$2"
+    local option=${save_tri:i:1};local newString="$1";
+    # en fonction du critère du tri appelé...
+    case "$option" in 
+        # si on appel le critère "n", on exécute la fonction qui trie la chaine par nom des entrées.
+        "n") newString=$(sortByOption $1 nameFile $2);;
 
-    stringFiles=$(sortByName $stringFiles)
-    
-    test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
+        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "s") newString=$(sortByOption $1 sizeFile $2);;
+
+        # si on appel le critère "m", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "m") newString=$(sortByOption $1 lastDateFile $2);;
+
+        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "l") newString=$(sortByOption $1 linesFile $2);;
+
+        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "e") newString=$(sortByOption $1 extensionFile $2);;
+
+        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "p") newString=$(sortByOption $1 ownerFile $2);;
+
+        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "g") newString=$(sortByOption $1 groupFile $2);;
+        *) echo "$newString";;
+    esac
+
+    # on retourne la chaine trié.
+    echo "$newString"
 
 }
 
@@ -298,7 +336,10 @@ function main() {
     createString "$save_rep"
 
     # On tri la chaine de caractère selon les critères de tris donnée en entrée.
-    sortString
+    stringFiles=$(sortString $stringFiles 1)
+    
+    # si la commande "-d" à été appelé, on exécute la fonction qui trie la chaine par ordre décroissant.
+    test "$param_dec" -ne 0 && newString=$(sortDescending $newString)
 
     # on affiche l'ensemble des ficheirs triés.
     printString "$stringFiles"
