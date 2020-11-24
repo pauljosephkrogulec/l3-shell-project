@@ -208,7 +208,7 @@ function printString() {
     for i in `seq 1 $nbFiles`
         do
         file="$(echo $1 | cut -d':' -f"$i")"
-        echo -e "$file \t\t : $(linesFile $file)"
+        echo -e "$file \t\t : $(sizeFile $file)"
     done
 }
 
@@ -273,7 +273,7 @@ function sortByOption() {
             test -z $val1 && val1=0
             test -z $val2 && val2=0
 
-            if test "$2" == "linesFile"
+            if test "$2" == "linesFile" -a "$2" == "sizeFile"
                 then
                 test $(compareNumber $val1 $val2) -eq -1 && mini="$j"
             else
