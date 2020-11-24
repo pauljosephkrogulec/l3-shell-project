@@ -57,10 +57,10 @@ function isSort() {
     local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg=`expr length $ALL_TRI`
     local valid=1;local carac1;local carac2;local found_type
 
-    while test "$i" -lt $lengthWord -a $valid -eq 1
+    while test "$i" -lt "$lengthWord" -a "$valid" -eq 1
         do
         carac1=${1:i:1};found_type=0;j=0
-        while test $j -lt $length_nsmletpg -a $found_type -ne 1
+        while test "$j" -lt "$length_nsmletpg" -a "$found_type" -ne 1
             do
             carac2=${ALL_TRI:j:1}
             if test "$carac1" == "$carac2"
@@ -70,7 +70,7 @@ function isSort() {
             j=`expr $j + 1`
         done
 
-        if test $found_type -ne 1
+        if test "$found_type" -ne 1
             then
             valid=0
         fi
@@ -93,40 +93,46 @@ function checkCommands() {
     # Si un élément n'est pas valide, ou valide mais qu'un autre élément du même type à déjà été rencontré... alors la commande donnée en paramètre
     # est fausse et on sort du programme en indiquant l'option invalide.
 
-    local ind=1;local found;local i
+    local ind=1;local found
+
     for i in $ALL_PARAM
         do
         found=0
         if test $(isCommand $i) -eq 1
             then
-            if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
+            if test $(isRecursif $i) -eq 1 -a "$param_rec" -eq 0
                 then
                 param_rec="$ind"; found=1
 
-            elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
+            elif test $(isDescending $i) -eq 1 -a "$param_dec" -eq 0
                 then
                 param_dec="$ind"; found=1
 
-            elif test $(isSort $i) -eq 1 -a $param_tri -eq 0
+            elif test $(isSort $i) -eq 1 -a "$param_tri" -eq 0
                 then
                 param_tri="$ind"; save_tri="$i"; found=1
             fi
         else
-            if test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
+            if test $(isDirectory $i) -eq 1 -a "$param_rep" -eq 0
                 then
                 param_rep="$ind"; save_rep="$i"; found=1
             fi
         fi
+        # Si le paramètre n'est pas une option accepté, on sort du programme.
+        test "$found" -eq 0 && echo "invalid option -- '$i'" && exit 3
 
-        test $found -eq 0 && echo "invalid option -- '$i'" && exit 4
+        # on incrémente la position où l'on se trouve dans les paramètres.
         ind=`expr $ind + 1`
     done
-    test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 5
+    # Si il n'y a pas de répertoire ou si il n'est pas le dernier argument, on sort du programme.
+    test "$param_rep" -eq 0 && echo "Need a directory as parameter" && exit 4
+    test "$param_rep" -ne "$NB_PARAM" && echo "invalid -- '$save_rep must be the last parameter'" && exit 5
 }
 
 function nameFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nom.
-    echo $(basename $1)
+    local file=$(basename $1)
+    echo ${file%%.*}
 }
 
 function sizeFile() {
@@ -136,7 +142,7 @@ function sizeFile() {
 
 function lastDateFile() {
     # Fonction qui prend en paramètre un fichier et retourne la date de sa dernière modification.
-    echo $(stat -c "%y" $1)
+    echo $(stat -c "%Y" $1)
 }
 
 function linesFile() {
@@ -146,7 +152,7 @@ function linesFile() {
 
 function extensionFile() {
     # Fonction qui prend en paramètre un fichier et retourne son extension.
-    echo $(sed 's/^.*\(...$\)/\1/' <<< $1)
+    echo ${1##*.}
 }
 
 function ownerFile() {
@@ -169,13 +175,13 @@ function createString() {
     do
         if test -f "$i"
         then
-            chaine=$chaine"$i$SEPARATOR"
-        elif test -d "$i" -a $param_rec -ne 0
+            chaine="$chaine$i$SEPARATOR"
+        elif test -d "$i" -a "$param_rec" -ne 0
             then
-            chaine= createString $i
+            chaine="$chaine$i$SEPARATOR$(createString "$i")"
         fi
     done
-    stringFiles=$stringFiles$chaine
+    echo "$chaine"
 }
 
 function countFiles() {
@@ -192,7 +198,7 @@ function countFiles() {
             res=`expr $res + 1`
             ch=""
         else
-            ch=$ch"$carac"
+            ch="$ch$carac"
         fi
     done
     echo $res
@@ -208,15 +214,15 @@ function printString() {
     for i in `seq 1 $nbFiles`
         do
         file="$(echo $1 | cut -d':' -f"$i")"
-        echo -e "$file \t\t : $(sizeFile $file)"
+        echo -e "$file \t\t : $(groupFile $file)"
     done
 }
 
 function compareText() {
-    if test $1 \> $2 
+    if test "$1" \> "$2"
         then
         echo 1
-    elif test $1 \< $2 
+    elif test "$1" \< "$2"
         then
         echo -1
     else
@@ -224,10 +230,10 @@ function compareText() {
     fi
 }
 function compareNumber() {
-    if test $1 -gt $2 
+    if test "$1" -gt "$2" 
         then
         echo 1
-    elif test $1 -eq $2 
+    elif test "$1" -eq "$2"
         then
         echo 0
     else
@@ -245,7 +251,7 @@ function sortDescending() {
     while test "$i" -ne 0
         do
         word=$(echo $1 | cut -d':' -f"$i")
-        newString=$newString"$word"$SEPARATOR
+        newString="$newString$word$SEPARATOR"
         i=`expr $i - 1`
     done
     echo "$newString"
@@ -256,7 +262,7 @@ function sortByOption() {
     # et va trier cette chaine selon le nom des fichiers. (méthode de tri par sélection)
 
     local newString="$1";local word="";local word_mini="";local ref="";local tmp=0
-    local len=$(countFiles $1);local i=1;local j;local mini=0
+    local len=$(countFiles $1);local i=1;local j;local mini=0;local val_word="";local val_mini=""
 
     for i in `seq 1 $len`
         do
@@ -267,17 +273,17 @@ function sortByOption() {
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
 
-            local val1="$($2 $word)"
-            local val2="$($2 $word_mini)"
+            val_word="$($2 $word)"
+            val_mini="$($2 $word_mini)"
 
-            test -z $val1 && val1=0
-            test -z $val2 && val2=0
+            test -z "$val_word" && val_word=0
+            test -z "$val_mini" && val_mini=0
 
-            if test "$2" == "linesFile" -a "$2" == "sizeFile"
+            if test "$2" == "linesFile" -o "$2" == "sizeFile"
                 then
-                test $(compareNumber $val1 $val2) -eq -1 && mini="$j"
+                test $(compareNumber "$val_word" "$val_mini") -eq -1 && mini="$j"
             else
-                test $(compareText $val1 $val2) -eq -1 && mini="$j"
+                test $(compareText "$val_word" "$val_mini") -eq -1 && mini="$j"
             fi
         done
         word=$(echo $newString | cut -d':' -f"$i")
@@ -306,16 +312,16 @@ function sortString {
         # si on appel le critère "m", on exécute la fonction qui trie la chaine par la taille des entrées.
         "m") newString=$(sortByOption $1 lastDateFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "sl", on exécute la fonction qui trie la chaine par la taille des entrées.
         "l") newString=$(sortByOption $1 linesFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "e", on exécute la fonction qui trie la chaine par la taille des entrées.
         "e") newString=$(sortByOption $1 extensionFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "p", on exécute la fonction qui trie la chaine par la taille des entrées.
         "p") newString=$(sortByOption $1 ownerFile $2);;
 
-        # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
+        # si on appel le critère "g", on exécute la fonction qui trie la chaine par la taille des entrées.
         "g") newString=$(sortByOption $1 groupFile $2);;
         *) echo "$newString";;
     esac
@@ -333,13 +339,12 @@ function main() {
     checkCommands
 
     # On crée la chaine de caractère contenant l'ensemble des fichiers.
-    createString "$save_rep"
-
+    stringFiles=$(createString "$save_rep")
     # On tri la chaine de caractère selon les critères de tris donnée en entrée.
-    stringFiles=$(sortString $stringFiles 1)
+    stringFiles=$(sortString $stringFiles 1) # 1 correspond au premier caractère de la chaine de critères de tri.
     
     # si la commande "-d" à été appelé, on exécute la fonction qui trie la chaine par ordre décroissant.
-    test "$param_dec" -ne 0 && newString=$(sortDescending $newString)
+    test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
 
     # on affiche l'ensemble des ficheirs triés.
     printString "$stringFiles"
