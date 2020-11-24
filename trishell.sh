@@ -11,11 +11,13 @@
 # on vérifie si il y a bien un répertoire passé en paramètre.
 test $# -lt 1 && echo "Need a command as parameter" && exit 1
 test $# -ge 5 && echo "Too many parameters (4 max)" && exit 2
+
 # Constantes
 SEPARATOR=":"
 NB_PARAM="$#"
 ALL_PARAM="$@"
 ALL_TRI="nsmletpg"      # on défini l'ensemble des critères de tris possibles.
+
 # Déclaration des variables
 param_rec=0         # Indique du paramètre si la commande -R est appelé, sinon 0.
 param_dec=0         # Indique du paramètre si la commande -d est appelé, sinon 0.
@@ -48,7 +50,7 @@ function isDescending() {
     test "$1" == "-d" && echo 1 || echo 0
 }
 
-function isTris() {
+function isSort() {
     # Fonction qui vérifie si le premier paramètre est bien la commande qui spécifie les critères de tris utilisés.
     # Si c'est bien la commande -nsmletpg on enregistre les critères et on retourne 1, sinon faux
 
@@ -105,7 +107,7 @@ function checkCommands() {
                 then
                 param_dec="$ind"; found=1
 
-            elif test $(isTris $i) -eq 1 -a $param_tri -eq 0
+            elif test $(isSort $i) -eq 1 -a $param_tri -eq 0
                 then
                 param_tri="$ind"; save_tri="$i"; found=1
             fi
@@ -124,7 +126,7 @@ function checkCommands() {
 
 function nameFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nom.
-    echo .$(echo $1 | cut -d'.' -f2)
+    echo $(basename $1)
 }
 
 function sizeFile() {
@@ -193,7 +195,7 @@ function countFiles() {
             ch=$ch"$carac"
         fi
     done
-    echo "$res"
+    echo $res
 }
 
 function printString() {
@@ -232,7 +234,7 @@ function compareNumber() {
     fi
 }
 
-function tri_d() {
+function sortDescending() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
     
@@ -248,77 +250,59 @@ function tri_d() {
     echo "$newString"
 }
 
-function tri_n() {
+function sortByName() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
 
-    local i=1;local j=1;local k=1; local cpt=0
-    local newString="";local file="";local file2="";local numberF=0;local name1="";local name2="";local tmp=""
-    local len=$(countFiles $1)
-    while test "$i" -le "$len"
+    local newString=$1;local word="";local word_mini="";local ref=""
+    local len=$(countFiles $1);local i=1;local j;local mini=0
+
+    for i in `seq 1 $len`
         do
-        file=$(echo $1 | cut -d':' -f"$i")
-        if test $numberF -eq 0
-            then
-            newString="$file:"
-            numberF=1
-        else
-            j=1;found=0
-            name1=$(nameFile $file)
-            file2=$(echo $newString | cut -d':' -f1)
-            name2=$(nameFile $file2)
-            while test $(compareText $name2 $name1) -ne 1 -a $j -le $numberF
-                do
-                j=`expr $j + 1`
-                file2=$(echo $newString | cut -d':' -f"$j")
-                name2=$(nameFile $file2)
-                cpt=$j
-            done
-            if test $cpt -gt $numberF 
-                then 
-                newString="$newString$file:"
-                numberF=`expr $numberF + 1`
-            else
-                if test $(compareText $name2 $name1) -eq 1
-                    then
-                    cpt=`expr $cpt + 1`
-                    while test $k -lt $cpt
-                        do
-                        tmp="$tmp$(echo $newString | cut -d':' -f"$k")":
-                        k=`expr $k + 1`
-                    done
-                    tmp="$tmp$file:"
-                    cpt=`expr $cpt + 1`
-                    while test $cpt -lt $numberF
-                        do
-                        tmp="$tmp$(echo $newString | cut -d':' -f"$k"):"
-                        cpt=`expr $cpt + 1`
-                    done
-                    newString=$tmp
-                    numberF=`expr $numberF + 1`
-                fi
-            fi
-        fi
-        i=`expr $i + 1`
+        mini="$i"
+        j="$i"
+        for j in `seq $i $len`
+            do
+            word=$(echo $newString | cut -d':' -f"$j")
+            word_mini=$(echo $newString | cut -d':' -f"$mini")
+            test $(compareText $(nameFile $word) $(nameFile $word_mini)) -eq -1 && mini=$j
+        done
+        word=$(echo $newString | cut -d':' -f"$i")
+        word_mini=$(echo $newString | cut -d':' -f"$mini")
+
+        # on remplace inverse les fichiers dans la chaine
+        newString=$(awk -v a="$word_mini" 'BEGIN{FS=OFS=":"} {$'$i'=a; print}' <<< "$newString")
+        newString=$(awk -v a="$word" 'BEGIN{FS=OFS=":"} {$'$mini'=a; print}' <<< "$newString")
     done
-    stringFiles="$newString"
+    echo "$newString"
 }
 
+function sortString {
+    # Fonction qui ne prend rien en paramètre,
+    # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
+
+    stringFiles=$(sortByName $stringFiles)
+    
+    test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
+
+}
 
 function main() {
-    # Fonction qui nb prend rien en paramètre et exécute le programme.
+    # Fonction main qui ne prend rien en paramètre,
+    # et va exécuter les diverses commandes nécessaires au bon déroulement du programme.
 
-    # On vérifie la commande donnée.
+    # On vérifie la commande d'entrée donnée.
     checkCommands
-    createString $save_rep
-    
-    tri_n $stringFiles
-    if test $param_dec -ne 0
-        then
-        stringFiles=$(tri_d $stringFiles)
-    fi
-    printString $stringFiles
+
+    # On crée la chaine de caractère contenant l'ensemble des fichiers.
+    createString "$save_rep"
+
+    # On tri la chaine de caractère selon les critères de tris donnée en entrée.
+    sortString
+
+    # on affiche l'ensemble des ficheirs triés.
+    printString "$stringFiles"
 }
 
 # on appelle la fonction main pour lancer le programme
-main 
+main
