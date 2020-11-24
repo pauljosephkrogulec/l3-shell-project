@@ -222,17 +222,7 @@ function compareText() {
         echo 0
     fi
 }
-function compareNumber() {
-    if test $1 -gt $2 
-        then
-        echo 1
-    elif test $1 -eq $2 
-        then
-        echo 0
-    else
-        echo -1
-    fi
-}
+
 
 function sortDescending() {
     # Fonction qui prend en paramètre récupère chaque fichier de la chaine de caractère à l'aide de la commande cut,
@@ -265,7 +255,7 @@ function sortByName() {
             do
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
-            test $(compareText $(nameFile $word) $(nameFile $word_mini)) -eq -1 && mini=$j
+            test $(compareText $($2 $word) $($2 $word_mini)) -eq -1 && mini=$j
         done
         word=$(echo $newString | cut -d':' -f"$i")
         word_mini=$(echo $newString | cut -d':' -f"$mini")
@@ -281,7 +271,7 @@ function sortString {
     # Fonction qui ne prend rien en paramètre,
     # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
 
-    stringFiles=$(sortByName $stringFiles)
+    stringFiles=$(sortByName $stringFiles nameFile)
     
     test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
 
