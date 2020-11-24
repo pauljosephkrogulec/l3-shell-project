@@ -57,10 +57,10 @@ function isSort() {
     local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg=`expr length $ALL_TRI`
     local valid=1;local carac1;local carac2;local found_type
 
-    while test "$i" -lt $lengthWord -a $valid -eq 1
+    while test "$i" -lt "$lengthWord" -a "$valid" -eq 1
         do
         carac1=${1:i:1};found_type=0;j=0
-        while test $j -lt $length_nsmletpg -a $found_type -ne 1
+        while test "$j" -lt "$length_nsmletpg" -a "$found_type" -ne 1
             do
             carac2=${ALL_TRI:j:1}
             if test "$carac1" == "$carac2"
@@ -70,7 +70,7 @@ function isSort() {
             j=`expr $j + 1`
         done
 
-        if test $found_type -ne 1
+        if test "$found_type" -ne 1
             then
             valid=0
         fi
@@ -93,35 +93,40 @@ function checkCommands() {
     # Si un élément n'est pas valide, ou valide mais qu'un autre élément du même type à déjà été rencontré... alors la commande donnée en paramètre
     # est fausse et on sort du programme en indiquant l'option invalide.
 
-    local ind=1;local found;local i
+    local ind=1;local found
+
     for i in $ALL_PARAM
         do
         found=0
         if test $(isCommand $i) -eq 1
             then
-            if test $(isRecursif $i) -eq 1 -a $param_rec -eq 0
+            if test $(isRecursif $i) -eq 1 -a "$param_rec" -eq 0
                 then
                 param_rec="$ind"; found=1
 
-            elif test $(isDescending $i) -eq 1 -a $param_dec -eq 0
+            elif test $(isDescending $i) -eq 1 -a "$param_dec" -eq 0
                 then
                 param_dec="$ind"; found=1
 
-            elif test $(isSort $i) -eq 1 -a $param_tri -eq 0
+            elif test $(isSort $i) -eq 1 -a "$param_tri" -eq 0
                 then
                 param_tri="$ind"; save_tri="$i"; found=1
             fi
         else
-            if test $(isDirectory $i) -eq 1 -a $param_rep -eq 0
+            if test $(isDirectory $i) -eq 1 -a "$param_rep" -eq 0
                 then
                 param_rep="$ind"; save_rep="$i"; found=1
             fi
         fi
+        # Si le paramètre n'est pas une option accepté, on sort du programme.
+        test "$found" -eq 0 && echo "invalid option -- '$i'" && exit 3
 
-        test $found -eq 0 && echo "invalid option -- '$i'" && exit 4
+        # on incrémente la position où l'on se trouve dans les paramètres.
         ind=`expr $ind + 1`
     done
-    test $param_rep -eq 0 && echo "Need a directory as parameter" && exit 5
+    # Si il n'y a pas de répertoire ou si il n'est pas le dernier argument, on sort du programme.
+    test "$param_rep" -eq 0 && echo "Need a directory as parameter" && exit 4
+    test "$param_rep" -ne "$NB_PARAM" && echo "invalid -- '$save_rep must be the last parameter'" && exit 5
 }
 
 function nameFile() {
@@ -170,13 +175,13 @@ function createString() {
     do
         if test -f "$i"
         then
-            chaine=$chaine"$i$SEPARATOR"
-        elif test -d "$i" -a $param_rec -ne 0
+            chaine="$chaine$i$SEPARATOR"
+        elif test -d "$i" -a "$param_rec" -ne 0
             then
-            chaine= createString $i
+            chaine= createString "$i"
         fi
     done
-    stringFiles=$stringFiles$chaine
+    stringFiles="$stringFiles$chaine"
 }
 
 function countFiles() {
@@ -193,7 +198,7 @@ function countFiles() {
             res=`expr $res + 1`
             ch=""
         else
-            ch=$ch"$carac"
+            ch="$ch$carac"
         fi
     done
     echo $res
@@ -214,10 +219,10 @@ function printString() {
 }
 
 function compareText() {
-    if test $1 \> $2 
+    if test "$1" \> "$2"
         then
         echo 1
-    elif test $1 \< $2 
+    elif test "$1" \< "$2"
         then
         echo -1
     else
@@ -225,10 +230,10 @@ function compareText() {
     fi
 }
 function compareNumber() {
-    if test $1 -gt $2 
+    if test "$1" -gt "$2" 
         then
         echo 1
-    elif test $1 -eq $2 
+    elif test "$1" -eq "$2"
         then
         echo 0
     else
@@ -246,7 +251,7 @@ function sortDescending() {
     while test "$i" -ne 0
         do
         word=$(echo $1 | cut -d':' -f"$i")
-        newString=$newString"$word"$SEPARATOR
+        newString="$newString$word$SEPARATOR"
         i=`expr $i - 1`
     done
     echo "$newString"
@@ -337,10 +342,10 @@ function main() {
     createString "$save_rep"
 
     # On tri la chaine de caractère selon les critères de tris donnée en entrée.
-    stringFiles=$(sortString $stringFiles 1)
+    stringFiles=$(sortString $stringFiles 1) # 1 correspond au premier caractère de la chaine de critères de tri.
     
     # si la commande "-d" à été appelé, on exécute la fonction qui trie la chaine par ordre décroissant.
-    test "$param_dec" -ne 0 && newString=$(sortDescending $newString)
+    test "$param_dec" -ne 0 && stringFiles=$(sortDescending $stringFiles)
 
     # on affiche l'ensemble des ficheirs triés.
     printString "$stringFiles"
