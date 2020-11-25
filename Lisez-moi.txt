@@ -1,0 +1,21 @@
+Vous trouvez dans cette archive les élements suivants :
+- '/home' : contenant plusieurs répertoire et fichiers utilisés comme exemple de test.
+- 'trishell.sh' : fichier contenant l'ensemble du programme effectuant les tris et l'affichage de ceux-ci.
+- 'trishell_2020.pdf' : fichier PDF contenant le sujet du projet.
+
+
+Lancez le programme : bash trishell.sh [-R] [-d] [-nsmletpg] ./home
+
+INFO : Comme par principe, les options : [-R], [-d], [-nsmletpg], sont placées avant le répertoire cible et dans n'importe quel ordre.
+Ces options sont égalements facultatives.
+
+Exemple de ligne de commande possible :
+- bash trishell.sh -R -d -pse ./home
+- bash trishell.sh -R -n -d ./home
+- bash trishell.sh -se -R -d ./home
+- bash trishell.sh -R ./home
+- bash trishell.sh -d ./home
+- bash trishell.sh ./home
+
+> Quentin Carpentier & & Paul-Joseph Krogulec
+GitHub : https://github.com/pauljosephkrogulec/l3-shell-project
