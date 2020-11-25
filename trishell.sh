@@ -25,7 +25,7 @@ param_tri=0         # Indique du paramètre si la commande -nsmletpg est appelé
 param_rep=0         # Indique du paramètre si on a bien un répertoire en paramètre, 0 sinon.
 
 save_rep=""         # on sauvegarde le répertoire donné en paramètre.
-save_tri=""         # on sauvegarde les critères de tris donnés en paramètre.
+save_options=""     # on sauvegarde les critères de tris donnés en paramètre.
 
 stringFiles=""      # on sauvegarde dans la chaine l'ensemble des fichiers.
 
@@ -55,31 +55,41 @@ function isSort() {
     # Si c'est bien la commande -nsmletpg on enregistre les critères et on retourne 1, sinon faux
     
     # déclaration de variables...
-    local i=1;local j;local lengthWord=`expr length $1`;local length_nsmletpg=`expr length $ALL_TRI`
+    local i=1;local j;local len_entree=`expr length $1`;local len_nsmletpg=`expr length $ALL_TRI`
     local valid=1;local carac1;local carac2;local found_type
 
-    while test "$i" -lt "$lengthWord" -a "$valid" -eq 1
+    # on parcourt la chaine d'optino de tri et tant que chaque élements soit valide
+    while test "$i" -lt "$len_entree" -a "$valid" -eq 1
         do
+        # on récupérer le i caractère de la chaine en entrée
         carac1=${1:i:1};found_type=0;j=0
-        while test "$j" -lt "$length_nsmletpg" -a "$found_type" -ne 1
+
+        # on le compare à chaque option possible
+        while test "$j" -lt "$len_nsmletpg" -a "$found_type" -ne 1
             do
+            # on récupérer le h caractère de la chaine sauvegardée
             carac2=${ALL_TRI:j:1}
+            # et on compare els deux caractère, si ils sont égaux, on à trouvé et on s'arrête.
             test "$carac1" == "$carac2" && found_type=1
+            # on incrémente j
             j=`expr $j + 1`
         done
 
+        # si le caractère n'est pas une option de tri, on s'arrête et on met valide à faux.
         test "$found_type" -ne 1 && valid=0
-        
+
+        # on incrémente i
         i=`expr $i + 1`
     done
     
+    # on retourne si c'est valide ou non (1, 0)
     echo $valid
 }
 
 function isDirectory() {
     # Fonction qui vérifie si le premier paramètre est bien un répertoire,
     # Si c'est le cas, on retourne 1, sinon 0.
-
+    
     test -d "$1" && echo 1 || echo 0
 }
 
@@ -91,26 +101,42 @@ function checkCommands() {
     # déclaration de variables...
     local ind=1;local found
 
+    # pour chaque paramètre
     for i in $ALL_PARAM
         do
+        # on remet found à 0 pour chaque paramètre.
         found=0
+        # si c'est une commande..
         if test $(isCommand $i) -eq 1
             then
+            # si il s'agit d'un appel -R et que l'on ne l'a pas déjà rencontré avant.
             if test $(isRecursif $i) -eq 1 -a "$param_rec" -eq 0
                 then
+                # on actualise le paramètre à 1 pour dire qu'on à rencontré un -R
+                # et on dit qu'on a trouvé un paramètre valide (found = 1)
                 param_rec="$ind"; found=1
 
+            # si il s'agit d'un appel -d et que l'on ne l'a pas déjà rencontré avant.
             elif test $(isDescending $i) -eq 1 -a "$param_dec" -eq 0
                 then
+                # on actualise le paramètre à 1 pour dire qu'on à rencontré un -d
+                # et on dit qu'on a trouvé un paramètre valide (found = 1)
                 param_dec="$ind"; found=1
 
+            # si il s'agit d'un appel d'une option de tri et que l'on ne l'a pas déjà rencontré avant.
             elif test $(isSort $i) -eq 1 -a "$param_tri" -eq 0
                 then
-                param_tri="$ind"; save_tri="$i"; found=1
+                # on actualise le paramètre à 1 pour dire qu'on à rencontré une option de tri
+                # et on dit qu'on a trouvé un paramètre valide (found = 1)
+                param_tri="$ind"; save_options="$i"; found=1
             fi
+        # si ce n'est pas une commande...
         else
+            # on regarde si c'est bien un répertoire et qu'il n'y a pas encore eu de répertoire appelé
             if test $(isDirectory $i) -eq 1 -a "$param_rep" -eq 0
                 then
+                # on actualise le paramètre à 1 pour dire qu'on à rencontré un répertoire
+                # et on dit qu'on a trouvé un paramètre valide (found = 1)
                 param_rep="$ind"; save_rep="$i"; found=1
             fi
         fi
@@ -127,20 +153,22 @@ function checkCommands() {
 
 function nameFile() {
    # Fonction qui prend en paramètre un fichier et retourne son nom.
+
     local file=$(basename $1)
     echo ${file%%.*}
 }
 
 function sizeFile() {
     # Fonction qui prend en paramètre un fichier et retourne sa taille.
+
     local res;
     res=$(stat -c "%s" $1)
-
     test -z "$res" && echo 0 || echo "$res"
 }
 
 function lastDateFile() {
     # Fonction qui prend en paramètre un fichier et retourne la date de sa dernière modification.
+
     echo $(stat -c "%Y" $1)
 }
 
@@ -148,8 +176,8 @@ function linesFile() {
     # Fonction qui prend en paramètre un fichier et retourne sa taille.
     # Si la taille est nul ou si il ne s'agit pas d'un fichier standart, on retourne 0.
 
-    local res;
-    
+    local res
+
     # si ce n'est pas un fichier, on retourne 0 comme nombre de ligne.
     if test \! -f "$1"
         then
@@ -163,6 +191,7 @@ function linesFile() {
 
 function extensionFile() {
     # Fonction qui prend en paramètre un fichier et retourne son extension.
+
     echo ${1##*.}
 }
 
@@ -217,16 +246,18 @@ function createString() {
     # Si la chaine a été crée on retourne 1, sinon 0
 
     # déclaration de variables...
-    local chaine=""
-
+    local newString
+    # pour chaque fichier du répertoire en paramètre..
     for i in "$1"/*
     do
-        chaine="$chaine$i$SEPARATOR"
-        test -d "$i" -a "$param_rec" -ne 0 && chaine="$chaine$(createString "$i")"
+        # on l'ajoute à la chaine.
+        newString="$newString$i$SEPARATOR"
+        # si c'est un répertoire, on rappel la chaine de manière récursiv (et on ajoute ce répertoire à la chaine)
+        test -d "$i" -a "$param_rec" -ne 0 && newString="$newString$(createString "$i")"
     done
 
     # on retourne la chaine crée.
-    echo "$chaine"
+    echo "$newString"
 }
 
 function countFiles() {
@@ -234,9 +265,8 @@ function countFiles() {
     # Et va retourner le nombre de fichiers (séparé par le séparateur ":").
     
     # déclaration de variables...
-    local len=`expr length $1`
-    local carac;local res=0
-    for i in `seq 0 $len`
+    local len=`expr length $1`;local carac;local res=0
+    for i in `seq 1 $len`
         do
         carac=${1:i:1}
         test "$carac" == "$SEPARATOR" && res=`expr $res + 1`
@@ -255,15 +285,15 @@ function printString() {
     local file;local name;local size;local lines;local typ;local date;local owner;local group;
 
     # Si il n'y a pas d'otpion, on réglé la longueur a 1.
-    test -z "$save_tri" && len_sort=1 || len_sort=`expr length $save_tri`
+    test -z "$save_options" && len_sort=1 || len_sort=`expr length $save_options`
 
     # on affiche l'entête des données (nom).
-    printf "Nom$(tput cuf 17)"
+    printf "Nom (.ext)$(tput cuf 10)"
 
     # on affiche chaque entête selon les options en entrées.
     for j in `seq 1 $len_sort`
         do
-        car=${save_tri:j:1}
+        car=${save_options:j:1}
         case "$car" in 
             "s") printf "| Taille $(tput cuf 8)";;
             "m") printf "| Derniere modif. $(tput cuf 8)";;
@@ -284,7 +314,7 @@ function printString() {
         printf $name"$(tput cuf $space)"
         for j in `seq 1 $len_sort`
             do
-            car=${save_tri:j:1}
+            car=${save_options:j:1}
             case "$car" in 
                 "s") size=$(sizeFile $file);space=`expr 15 - \( length $size \)`;printf "| $size$(tput cuf $space)";;
                 "m") date="$(stat -c "%y" $file)";printf "| $(echo $date | cut -d' ' -f1)$(tput cuf 14)";;
@@ -374,7 +404,7 @@ function sortByOption() {
     # et va trier cette chaine selon le nom des fichiers. (méthode de tri par sélection)
 
     # déclaration de variables...
-    local newString="$1";local word;local word_mini;local ref
+    local newString="$1";local word;local word_mini
     local len=$(countFiles $1);local i=1;local j;local mini=0
 
     for i in `seq 1 $len`
@@ -385,7 +415,7 @@ function sortByOption() {
             do
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
-            
+
             # pour le cas, si on compare des données de type nombres.
             if test "$2" == "linesFile" -o "$2" == "sizeFile" -o "$2" == "typeFile"
                 then
@@ -410,61 +440,62 @@ function equals() {
     # La fonction va parcourir la chaine et trier les élements identiques en appelant l'option de tri suivante.
     
     # déclaration de variables...
-    local newString="$1";local len=$(countFiles $1);local word=$(echo $newString | cut -d':' -f1);
-    local ind=$($2 $word);local ch;local k=`expr $3 + 1`;local string;
+    local newString;local len=$(countFiles $1);local word=$(echo $1 | cut -d':' -f1)
+    local ind=$($2 $word);local tmp;local k=`expr $3 + 1`
 
     # pour le cas, si on compare des données de type nombres.
     if test "$2" == "linesFile" -o "$2" == "sizeFile" -o "$2" == "typeFile"
         then
         for i in `seq 1 $len`
             do
-            word=$(echo $newString | cut -d':' -f"$i")
+            word=$(echo $1 | cut -d':' -f"$i")
             if test $(numCompare $($2 $word) $ind) -ne 0
                 then
-                if test $(countFiles $ch) -ne 1
+                if test $(countFiles $tmp) -ne 1
                     then
-                    string=$string$(sortString $ch $k)
+                    newString=$newString$(sortString $tmp $k)
                 else
-                    string="$string$ch"
+                    newString="$newString$tmp"
                 fi
-                ch=""
+                tmp=""
                 ind=$($2 $word)
             fi
-            ch="$ch$word$SEPARATOR"
+            tmp="$tmp$word$SEPARATOR"
         done
     
     # pour le cas, si on compare des données de type chaine.
     else
         for i in `seq 1 $len`
             do
-            word=$(echo $newString | cut -d':' -f"$i")
+            word=$(echo $1 | cut -d':' -f"$i")
             if test $(stringCompare "$($2 $word)" "$ind") -ne 0
                 then
-                if test $(countFiles $ch) -ne 1
+                if test $(countFiles $tmp) -ne 1
                     then
-                    string=$string$(sortString $ch $k)
+                    newString=$newString$(sortString $tmp $k)
                 else
-                    string="$string$ch"
+                    newString="$newString$tmp"
                 fi
-                ch=""
+                tmp=""
                 ind=$($2 $word)
             fi
-            ch="$ch$word$SEPARATOR"
+            tmp="$tmp$word$SEPARATOR"
         done
     fi
     
-    test $(countFiles $ch) -ne 1 && string=$string$(sortString $ch $k) || string="$string$ch"
+    test $(countFiles $tmp) -ne 1 && newString=$newString$(sortString $tmp $k) || newString="$newString$tmp"
 
     # on retourne la chaine
-    echo "$string"
+    echo "$newString"
 }
+
 function sortString {
     # Fonction qui ne prend rien en paramètre,
     # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
     
     # déclaration de variables...
     local i="$2";i_p=`expr $i + 1`
-    local option=${save_tri:i:1};local option2=${save_tri:i_p:1};local newString="$1";
+    local option=${save_options:i:1};local option2=${save_options:i_p:1};local newString="$1"
 
     # en fonction du critère du tri appelé...
     case "$option" in 
