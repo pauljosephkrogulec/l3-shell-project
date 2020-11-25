@@ -137,7 +137,10 @@ function nameFile() {
 
 function sizeFile() {
     # Fonction qui prend en paramètre un fichier et retourne sa taille.
-    echo $(stat -c "%s" $1)
+    local res;
+    res=$(stat -c "%s" $1)
+
+    test -z "$res" && echo 0 || echo "$res"
 }
 
 function lastDateFile() {
@@ -146,13 +149,59 @@ function lastDateFile() {
 }
 
 function linesFile() {
-   # Fonction qui prend en paramètre un fichier et retourne son nombre de lignes.
-   echo $(sed -n '$=' $1)
+    # Fonction qui prend en paramètre un fichier et retourne sa taille.
+    # Si la taille est nul ou si il ne s'agit pas d'un fichier standart, on retourne 0.
+
+    local res;
+    
+    if test \! -f "$1"
+        then
+        echo 0
+    else
+        res=$(sed -n '$=' $1)
+        test -z "$res" && echo 0 || echo $res
+
+    fi
 }
 
 function extensionFile() {
     # Fonction qui prend en paramètre un fichier et retourne son extension.
     echo ${1##*.}
+}
+
+function typeFile() {
+    # Fonction qui prend en paramètre un fichier et retourne son type.
+    # 1 : répertoire, 2 : fichier, 3 : liens, 4 : bloc, 5 : caractère, 6 : tube, 7 : socket
+
+    # si c'est un répertoire.
+    if test -d "$1"
+        then
+        echo 1
+    # si c'est un fichier.
+    elif test -f "$1"
+        then
+        echo 2
+    # si c'est un lien symbolique.
+    elif test -L "$1"
+        then 
+        echo 3
+    # si c'est un fichier spécial de type bloc.
+    elif test -b "$1"
+        then
+        echo 4
+    # si c'est un fichier spécial de type caractère.
+    elif test -c "$1"
+        then
+        echo 5
+    # si c'est un tube nommé.
+    elif test -p "$1"
+        then
+        echo 6
+    # si c'est un socket.
+    elif test -S "$1"
+        then
+        echo 7
+    fi
 }
 
 function ownerFile() {
@@ -173,12 +222,11 @@ function createString() {
     local chaine=""
     for i in "$1"/*
     do
-        if test -f "$i"
+        if test -d "$i" -a "$param_rec" -ne 0
         then
-            chaine="$chaine$i$SEPARATOR"
-        elif test -d "$i" -a "$param_rec" -ne 0
-            then
             chaine="$chaine$i$SEPARATOR$(createString "$i")"
+        else
+            chaine="$chaine$i$SEPARATOR"
         fi
     done
     echo "$chaine"
@@ -188,8 +236,8 @@ function countFiles() {
     # Fonction qui va parcourir une chaine de caractère passé en paramètre contenant des fichiers.
     # Et va retourner le nombre de ficheirs (séparé par le séparateur ":").
 
-    local len=`expr length $1`;local ch=""
-    local carac="";local res=0
+    local len=`expr length $1`;local ch
+    local carac;local res=0
     for i in `seq 0 $len`
         do
         carac=${1:i:1}
@@ -208,17 +256,65 @@ function printString() {
     # Fonction qui va parcourir la chaine de caractère stringFiles contenant l'ensemble des fichiers du paramètres données.
     # Et va afficher les fichiers séparés par un séparateur ":"
 
-    local i=1;local nbFiles=$(countFiles $1);
-    local file=""
+    local i=1;local nbFiles=$(countFiles $1);local len_sort
+    local file;local name;local size;local lines;local typ;local space1;local space2
+    local space2;local ind=1;local car;
 
+    # Si il n'y a pas d'otpion, on réglé la longueur a 1.
+    test -z "$save_tri" && len_sort=1 || len_sort=`expr length $save_tri`
+
+    # on affiche l'entête des données (nom).
+    printf "Nom$(tput cuf 17)"
+
+    # on affiche chaque entête selon les options en entrées.
+    while test "$ind" -le "$len_sort"
+        do
+        car=${save_tri:ind:1}
+        case "$car" in 
+            "s") printf "| Taille $(tput cuf 8)";;
+            "l") printf "| Nb Lignes $(tput cuf 5)";;
+            "t") printf "| Type $(tput cuf 10)";;
+            *);;
+        esac
+        ind=`expr $ind + 1`
+    done
+    # on affiche par defaut le chemin du ficheir également.
+    printf "| Chemin\n"
+    ind=1
+    while test "$ind" -le "$len_sort"
+        do
+        printf "============================="
+        ind=`expr $ind + 1`
+    done
+    printf "\n"
     for i in `seq 1 $nbFiles`
         do
         file="$(echo $1 | cut -d':' -f"$i")"
-        echo -e "$file \t\t : $(groupFile $file)"
+        name=$(basename $file);space1=`expr 20 - \( length $name \)`
+
+        printf $name"$(tput cuf $space1)"
+        ind=1
+        while test "$ind" -le "$len_sort"
+            do
+            car=${save_tri:ind:1}
+            case "$car" in 
+                "s") size=$(sizeFile $file);space2=`expr 15 - \( length $size \)`;printf "| $size$(tput cuf $space2)";;
+                "l") lines=$(linesFile $file);space2=`expr 15 - \( length $lines \)`;printf "| $lines$(tput cuf $space2)";;
+                "t") typ=$(typeFile $file);space2=`expr 15 - \( length $typ \)`;printf "| $typ$(tput cuf $space2)";;
+                *);;
+            esac
+            ind=`expr $ind + 1`
+        done
+
+        printf "| $file\n"
     done
 }
 
-function compareText() {
+function stringCompare() {
+    # Fonction qui prend en paramètre deux chaine de caractère, et qui retourne
+    # 1 si la première chaine est plus grande que le seconde, -1 si elle est plus petite,
+    # ou 0 si les deux chaines sont égales.
+
     if test "$1" \> "$2"
         then
         echo 1
@@ -229,7 +325,11 @@ function compareText() {
         echo 0
     fi
 }
-function compareNumber() {
+
+function numCompare() {
+    # Fonction qui prend en paramètre deux entiers, et qui retourne
+    # 1 si le premier entier est supérieur au second,  -1 si il est inférieur,
+    # ou 0 si les deux entiers sont égaux.
     if test "$1" -gt "$2" 
         then
         echo 1
@@ -246,7 +346,7 @@ function sortDescending() {
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
     
     local i=$(countFiles $1)
-    local newString="";local word=""
+    local newString;local word
 
     while test "$i" -ne 0
         do
@@ -261,8 +361,8 @@ function sortByOption() {
     # Fonction qui prend en paramètre une chaine de caractère de fichiers,
     # et va trier cette chaine selon le nom des fichiers. (méthode de tri par sélection)
 
-    local newString="$1";local word="";local word_mini="";local ref="";local tmp=0
-    local len=$(countFiles $1);local i=1;local j;local mini=0;local val_word="";local val_mini=""
+    local newString="$1";local word;local word_mini;local ref;local tmp=0
+    local len=$(countFiles $1);local i=1;local j;local mini=0;local val_word;local val_mini
 
     for i in `seq 1 $len`
         do
@@ -273,25 +373,22 @@ function sortByOption() {
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
 
-            val_word="$($2 $word)"
-            val_mini="$($2 $word_mini)"
-
-            test -z "$val_word" && val_word=0
-            test -z "$val_mini" && val_mini=0
-
-            if test "$2" == "linesFile" -o "$2" == "sizeFile"
+            if test "$2" == "linesFile" -o "$2" == "sizeFile" -o "$2" == "typeFile"
                 then
-                test $(compareNumber "$val_word" "$val_mini") -eq -1 && mini="$j"
+                test $(numCompare "$($2 $word)" "$($2 $word_mini)") -eq -1 && mini="$j"
             else
-                test $(compareText "$val_word" "$val_mini") -eq -1 && mini="$j"
+                test $(stringCompare "$($2 $word)" "$($2 $word_mini)") -eq -1 && mini="$j"
+       
             fi
         done
+
         word=$(echo $newString | cut -d':' -f"$i")
         word_mini=$(echo $newString | cut -d':' -f"$mini")
 
         # on remplace inverse les fichiers dans la chaine
         newString=$(awk -v a="$word_mini" 'BEGIN{FS=OFS=":"} {$'$i'=a; print}' <<< "$newString")
         newString=$(awk -v a="$word" 'BEGIN{FS=OFS=":"} {$'$mini'=a; print}' <<< "$newString")
+    
     done
     echo "$newString"
 }
@@ -304,25 +401,28 @@ function sortString {
     # en fonction du critère du tri appelé...
     case "$option" in 
         # si on appel le critère "n", on exécute la fonction qui trie la chaine par nom des entrées.
-        "n") newString=$(sortByOption $1 nameFile $2);;
+        "n") newString=$(sortByOption $1 nameFile);;
 
         # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "s") newString=$(sortByOption $1 sizeFile $2);;
+        "s") newString=$(sortByOption $1 sizeFile);;
 
         # si on appel le critère "m", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "m") newString=$(sortByOption $1 lastDateFile $2);;
+        "m") newString=$(sortByOption $1 lastDateFile);;
 
         # si on appel le critère "sl", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "l") newString=$(sortByOption $1 linesFile $2);;
+        "l") newString=$(sortByOption $1 linesFile);;
 
         # si on appel le critère "e", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "e") newString=$(sortByOption $1 extensionFile $2);;
+        "e") newString=$(sortByOption $1 extensionFile);;
+
+        # si on appel le critère "e", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "t") newString=$(sortByOption $1 typeFile);;
 
         # si on appel le critère "p", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "p") newString=$(sortByOption $1 ownerFile $2);;
+        "p") newString=$(sortByOption $1 ownerFile);;
 
         # si on appel le critère "g", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "g") newString=$(sortByOption $1 groupFile $2);;
+        "g") newString=$(sortByOption $1 groupFile);;
         *) echo "$newString";;
     esac
 
@@ -338,9 +438,10 @@ function main() {
     # On vérifie la commande d'entrée donnée.
     checkCommands
 
-    # On crée la chaine de caractère contenant l'ensemble des fichiers.
+    # On crée et sauvegarde la chaine de caractère contenant l'ensemble des fichiers.
     stringFiles=$(createString "$save_rep")
-    # On tri la chaine de caractère selon les critères de tris donnée en entrée.
+
+    # On tri et sauvegarde la chaine de fichiers selon les critères de tris donnée en entrée.
     stringFiles=$(sortString $stringFiles 1) # 1 correspond au premier caractère de la chaine de critères de tri.
     
     # si la commande "-d" à été appelé, on exécute la fonction qui trie la chaine par ordre décroissant.
