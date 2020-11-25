@@ -1,1 +1,0 @@
-quand tu as erreur \r tu run ca => vim trishell.sh +"set ff=unix" +wq
