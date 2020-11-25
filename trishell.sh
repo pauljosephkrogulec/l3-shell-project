@@ -64,17 +64,11 @@ function isSort() {
         while test "$j" -lt "$length_nsmletpg" -a "$found_type" -ne 1
             do
             carac2=${ALL_TRI:j:1}
-            if test "$carac1" == "$carac2"
-                then
-                found_type=1
-            fi
+            test "$carac1" == "$carac2" && found_type=1
             j=`expr $j + 1`
         done
 
-        if test "$found_type" -ne 1
-            then
-            valid=0
-        fi
+        test "$found_type" -ne 1 && valid=0
         
         i=`expr $i + 1`
     done
@@ -227,13 +221,11 @@ function createString() {
 
     for i in "$1"/*
     do
-        if test -d "$i" -a "$param_rec" -ne 0
-        then
-            chaine="$chaine$i$SEPARATOR$(createString "$i")"
-        else
-            chaine="$chaine$i$SEPARATOR"
-        fi
+        chaine="$chaine$i$SEPARATOR"
+        test -d "$i" -a "$param_rec" -ne 0 && chaine="$chaine$(createString "$i")"
     done
+
+    # on retourne la chaine crée.
     echo "$chaine"
 }
 
@@ -247,11 +239,10 @@ function countFiles() {
     for i in `seq 0 $len`
         do
         carac=${1:i:1}
-        if test "$carac" == "$SEPARATOR"
-            then
-            res=`expr $res + 1`
-        fi
+        test "$carac" == "$SEPARATOR" && res=`expr $res + 1`
     done
+
+    # on retourne le resultat.
     echo $res
 }
 
@@ -329,6 +320,7 @@ function numCompare() {
     # Fonction qui prend en paramètre deux entiers, et qui retourne
     # 1 si le premier entier est supérieur au second,  -1 si il est inférieur,
     # ou 0 si les deux entiers sont égaux.
+
     if test "$1" -gt "$2" 
         then
         echo 1
@@ -345,15 +337,18 @@ function sortDescending() {
     # et va ajouter chaque fichier dans une nouvelle chaine qui remplacera la chaine de fichier actuelle..
     
     # déclaration de variables...
-    local i=$(countFiles $1)
+    local len=$(countFiles $1)
     local newString;local word
 
-    while test "$i" -ne 0
+    # on parcourt la chaine dans le sens inverse
+    for i in `seq 1 $len`
         do
+        # et on ajoute à chaque fois en début de chaine.
         word=$(echo $1 | cut -d':' -f"$i")
-        newString="$newString$word$SEPARATOR"
-        i=`expr $i - 1`
+        newString="$word$SEPARATOR$newString"
     done
+
+    # on retourne la chaine
     echo "$newString"
 }
 
@@ -385,15 +380,18 @@ function sortByOption() {
     for i in `seq 1 $len`
         do
         mini="$i"
-        j="$i"
+        j=`expr $i + 1`
         for j in `seq $i $len`
             do
             word=$(echo $newString | cut -d':' -f"$j")
             word_mini=$(echo $newString | cut -d':' -f"$mini")
-
+            
+            # pour le cas, si on compare des données de type nombres.
             if test "$2" == "linesFile" -o "$2" == "sizeFile" -o "$2" == "typeFile"
                 then
                 test $(numCompare "$($2 $word)" "$($2 $word_mini)") -eq -1 && mini="$j"
+
+            # pour le cas, si on compare des données de type chaine.
             else
                 test $(stringCompare "$($2 $word)" "$($2 $word_mini)") -eq -1 && mini="$j"
             fi
@@ -407,45 +405,97 @@ function sortByOption() {
     echo "$newString"
 }
 
-function sortString {
-    # Fonction qui ne prend en paramètre une chaine de caractère et l'indice du critères de tri.
-    # On effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
-
+function equals() {
+    # Prend en paramètre une chaine de caractère, un appel de fonction et l'indice de l'option de tri.
+    # La fonction va parcourir la chaine et trier les élements identiques en appelant l'option de tri suivante.
+    
     # déclaration de variables...
-    local i="$2"
-    local option=${save_tri:i:1};local newString="$1";
+    local newString="$1";local len=$(countFiles $1);local word=$(echo $newString | cut -d':' -f1);
+    local ind=$($2 $word);local ch;local k=`expr $3 + 1`;local string;
+
+    # pour le cas, si on compare des données de type nombres.
+    if test "$2" == "linesFile" -o "$2" == "sizeFile" -o "$2" == "typeFile"
+        then
+        for i in `seq 1 $len`
+            do
+            word=$(echo $newString | cut -d':' -f"$i")
+            if test $(numCompare $($2 $word) $ind) -ne 0
+                then
+                if test $(countFiles $ch) -ne 1
+                    then
+                    string=$string$(sortString $ch $k)
+                else
+                    string="$string$ch"
+                fi
+                ch=""
+                ind=$($2 $word)
+            fi
+            ch="$ch$word$SEPARATOR"
+        done
+    
+    # pour le cas, si on compare des données de type chaine.
+    else
+        for i in `seq 1 $len`
+            do
+            word=$(echo $newString | cut -d':' -f"$i")
+            if test $(stringCompare "$($2 $word)" "$ind") -ne 0
+                then
+                if test $(countFiles $ch) -ne 1
+                    then
+                    string=$string$(sortString $ch $k)
+                else
+                    string="$string$ch"
+                fi
+                ch=""
+                ind=$($2 $word)
+            fi
+            ch="$ch$word$SEPARATOR"
+        done
+    fi
+    
+    test $(countFiles $ch) -ne 1 && string=$string$(sortString $ch $k) || string="$string$ch"
+
+    # on retourne la chaine
+    echo "$string"
+}
+function sortString {
+    # Fonction qui ne prend rien en paramètre,
+    # et effectue pour chaque commande passé en entrée, le trie sur la chaine de caractère contenant les fichiers.
+    
+    # déclaration de variables...
+    local i="$2";i_p=`expr $i + 1`
+    local option=${save_tri:i:1};local option2=${save_tri:i_p:1};local newString="$1";
 
     # en fonction du critère du tri appelé...
-    case "$option" in
+    case "$option" in 
         # si on appel le critère "n", on exécute la fonction qui trie la chaine par nom des entrées.
-        "n") newString=$(sortByOption $newString nameFile);;
+        "n") newString=$(sortByOption $1 nameFile);test \! -z $option2 && newString=$(equals $newString nameFile $2);;
 
         # si on appel le critère "s", on exécute la fonction qui trie la chaine par la taille des entrées.
-        "s") newString=$(sortByOption $newString sizeFile);;
+        "s") newString=$(sortByOption $1 sizeFile);test \! -z $option2 && newString=$(equals $newString sizeFile $2);;
 
-        # si on appel le critère "m", on exécute la fonction qui trie la chaine par la date des entrées.
-        "m") newString=$(sortByOption $newString lastDateFile);;
+        # si on appel le critère "m", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "m") newString=$(sortByOption $1 lastDateFile);test \! -z $option2 && newString=$(equals $newString lastDateFile $2);;
 
-        # si on appel le critère "sl", on exécute la fonction qui trie la chaine par le nombre de lignes des entrées.
-        "l") newString=$(sortByOption $newString linesFile);;
+        # si on appel le critère "sl", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "l") newString=$(sortByOption $1 linesFile);test \! -z $option2 && newString=$(equals $newString linesFile $2);;
 
-        # si on appel le critère "e", on exécute la fonction qui trie la chaine par les extensions des entrées.
-        "e") newString=$(sortByOption $newString extensionFile);;
+        # si on appel le critère "e", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "e") newString=$(sortByOption $1 extensionFile);test \! -z $option2 && newString=$(equals $newString extensionFile $2);;
 
-        # si on appel le critère "t", on exécute la fonction qui trie la chaine par les types des entrées.
-        "t") newString=$(sortByOption $newString typeFile);;
+        # si on appel le critère "e", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "t") newString=$(sortByOption $1 typeFile);test \! -z $option2 && newString=$(equals $newString typeFile $2);;
 
-        # si on appel le critère "p", on exécute la fonction qui trie la chaine par le propriétaire des entrées.
-        "p") newString=$(sortByOption $newString ownerFile);;
+        # si on appel le critère "p", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "p") newString=$(sortByOption $1 ownerFile);test \! -z $option2 && newString=$(equals $newString ownerFile $2);;
 
-        # si on appel le critère "g", on exécute la fonction qui trie la chaine par le groupe des entrées.
-        "g") newString=$(sortByOption $newString groupFile);;
+        # si on appel le critère "g", on exécute la fonction qui trie la chaine par la taille des entrées.
+        "g") newString=$(sortByOption $1 groupFile);test \! -z $option2 && newString=$(equals $newString groupFile $2);;
         *) echo "$newString";;
     esac
 
-    # on retourne la nouvelle chaine trié.
+    # on retourne la chaine trié.
     echo "$newString"
-
 }
 
 function main() {
